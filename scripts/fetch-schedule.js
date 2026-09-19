@@ -152,14 +152,15 @@ async function main() {
     return;
   }
 
-  // 커밋/푸시
+  // 커밋/푸시 (이 디렉토리는 독립 git repo = devforgekor/kuhwa. GitHub은 백업)
   const repoDir = path.join(__dirname, "..");
-  execSync("git add public/data", { cwd: repoDir, stdio: "inherit" });
+  execSync("git add -f public/data", { cwd: repoDir, stdio: "inherit" });
   execSync('git config user.name "devforge[bot]"', { cwd: repoDir });
   execSync('git config user.email "devforge[bot]@users.noreply.github.com"', { cwd: repoDir });
   execSync('git commit -m "chore: update NEIS schedule data"', { cwd: repoDir, stdio: "inherit" });
-  execSync("git push", { cwd: repoDir, stdio: "inherit" });
-  console.log("Pushed to GitHub");
+  execSync("git pull --rebase --autostash origin main", { cwd: repoDir, stdio: "inherit" });
+  execSync("git push origin main", { cwd: repoDir, stdio: "inherit" });
+  console.log("Pushed to GitHub (backup)");
 }
 
 main().catch(async (err) => {
