@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# lib/ - ignore except for db.py and __init__.py
+lib/*
+!lib/db.py
+!lib/__init__.py
+lib/_backup/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+timetable.log
+
+# Environment
+.env
+.secrets.env
+
+# Database
+*.db
+*.sqlite
+
+# Test
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Runtime
+*.pid
+*.lock
+.env*

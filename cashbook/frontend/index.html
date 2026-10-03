@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>현금출납부</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Login -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm mx-4">
+      <h1 class="text-xl font-bold text-center mb-6">현금출납부</h1>
+      <div id="login-error" class="text-red-500 text-sm text-center mb-4 hidden"></div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
+          <input type="password" id="api-key" placeholder="비밀번호 입력"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 autofocus>
+        </div>
+        <button onclick="doLogin()"
+                class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">
+          접속
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="app-view" class="hidden">
+    <nav class="bg-white shadow-sm border-b">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+        <span class="text-lg font-bold text-gray-800">현금출납부</span>
+        <button onclick="doLogout()" class="text-sm text-gray-500 hover:text-gray-700">로그아웃</button>
+      </div>
+    </nav>
+    <main class="max-w-6xl mx-auto px-4 py-6">
+      <div id="cashbook-root"></div>
+    </main>
+  </div>
+
+<script>
+let currentTab = 'settle';
+
+const API = {
+  baseUrl: 'https://devforge.152-69-229-246.nip.io/cashbook',
+  apiKey: '',
+
+  async request(method, path, body) {
+    const url = `${this.baseUrl}${path}?key=${encodeURIComponent(this.apiKey)}`;
+    const opts = { method, headers: {} };
+    if (body) {
+      if (body instanceof FormData) {
+        opts.body = body;
+      } else {
+        opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        opts.body = new URLSearchParams(body).toString();
+      }
+    }
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  getCashbook()       { return this.request('GET', '/api/cashbook'); },
+  addDeposit(d)       { return this.request('POST', '/api/deposit', d); },
+  editDeposit(id, d)  { return this.request('PUT', `/api/deposit/${id}`, d); },
+  delDeposit(id)      { return this.request('DELETE', `/api/deposit/${id}`); },
+  addWithdrawal(d)    { return this.request('POST', '/api/withdrawal', d); },
+  editWithdrawal(id, d){ return this.request('PUT', `/api/withdrawal/${id}`, d); },
+  delWithdrawal(id)   { return this.request('DELETE', `/api/withdrawal/${id}`); },
+};
+
+function doLogin() {
+  API.apiKey = document.getElementById('api-key').value;
+  localStorage.setItem('cb_key', API.apiKey);
+  loadCashbook();
+}
+
+function doLogout() {
+  localStorage.removeItem('cb_key');
+  document.getElementById('app-view').classList.add('hidden');
+  document.getElementById('login-view').classList.remove('hidden');
+}
+
+function fmt(n) {
+  return '₩' + Number(n).toLocaleString();
+}
+
+function startAmountEdit(el) {
+  const val = el.dataset.raw || '0';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = val;
+  input.className = 'edit-input text-right';
+  input.style.cssText = 'width:100%;height:100%;';
+  input.dataset.field = el.dataset.field;
+  if (el.dataset.id) input.dataset.id = el.dataset.id;
+  if (el.dataset.type) input.dataset.type = el.dataset.type;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  input.addEventListener('blur', () => finishAmountEdit(input));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+}
+
+function finishAmountEdit(input) {
+  const raw = input.value || '0';
+  const span = document.createElement('span');
+  span.className = 'edit-input text-right amount-display';
+  span.style.cssText = 'cursor:pointer;display:flex;align-items:center;justify-content:flex-end;width:100%;height:100%;';
+  span.dataset.field = input.dataset.field;
+  if (input.dataset.id) span.dataset.id = input.dataset.id;
+  if (input.dataset.type) span.dataset.type = input.dataset.type;
+  span.dataset.raw = raw;
+  span.textContent = fmt(raw);
+  span.onclick = () => startAmountEdit(span);
+  input.replaceWith(span);
+}
+
+function toDisplayDate(dateStr) {
+  if (!dateStr) return '';
+  if (/^\d{2}\.\d{2}\.\d{2}\.$/.test(dateStr)) return dateStr;
+  const m = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1].slice(2) + '.' + m[2] + '.' + m[3] + '.';
+  return dateStr;
+}
+
+function toISODate(displayDate) {
+  if (!displayDate) return '';
+  const m = displayDate.match(/(\d{2})\.(\d{2})\.(\d{2})\.?/);
+  if (m) return '20' + m[1] + '-' + m[2] + '-' + m[3];
+  return displayDate;
+}
+
+function formatDateInput(val) {
+  let v = val.replace(/[^\d]/g, '');
+  if (v.length > 6) v = v.slice(0, 6);
+  if (v.length >= 5) return v.slice(0,2) + '.' + v.slice(2,4) + '.' + v.slice(4) + (v.length === 6 ? '.' : '');
+  if (v.length >= 3) return v.slice(0,2) + '.' + v.slice(2);
+  return v;
+}
+
+function openDatePicker(btn) {
+  btn.parentElement.querySelector('.hidden-date').showPicker?.();
+}
+
+function onDatePicked(hiddenInput) {
+  const textInput = hiddenInput.parentElement.querySelector('input[type=text]');
+  if (hiddenInput.value) {
+    const p = hiddenInput.value.split('-');
+    textInput.value = p[0].slice(2) + '.' + p[1] + '.' + p[2] + '.';
+  }
+  textInput.dispatchEvent(new Event('change'));
+}
+
+function onDatePickedNew(hiddenInput, textId) {
+  const textInput = document.getElementById(textId);
+  if (hiddenInput.value) {
+    const p = hiddenInput.value.split('-');
+    textInput.value = p[0].slice(2) + '.' + p[1] + '.' + p[2] + '.';
+  }
+}
+
+function dateHTML(id, value, type) {
+  const disp = toDisplayDate(value);
+  const iso = toISODate(disp);
+  return `<div class="date-cell">
+    <input type="text" value="${esc(disp)}" placeholder="YY.MM.DD."
+           class="edit-input" data-field="date" data-id="${id}" data-type="${type}"
+           oninput="this.value=formatDateInput(this.value)">
+    <button type="button" class="date-btn" onclick="openDatePicker(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </button>
+    <input type="date" class="hidden-date" value="${iso}" onchange="onDatePicked(this)">
+  </div>`;
+}
+
+function dateHTMLNew(inputId) {
+  return `<div class="date-cell">
+    <input type="text" id="${inputId}" placeholder="YY.MM.DD." class="edit-input"
+           oninput="this.value=formatDateInput(this.value)">
+    <button type="button" class="date-btn" onclick="openDatePicker(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </button>
+    <input type="date" class="hidden-date" onchange="onDatePickedNew(this, '${inputId}')">
+  </div>`;
+}
+
+function amountHTML(id, amount, type) {
+  return `<span class="edit-input text-right amount-display"
+            style="cursor:pointer;display:flex;align-items:center;justify-content:flex-end;width:100%;height:100%;"
+            data-field="amount" data-id="${id}" data-type="${type}" data-raw="${amount}"
+            onclick="startAmountEdit(this)">${fmt(amount)}</span>`;
+}
+
+function esc(s) { return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function render(cb) {
+  const maxR = Math.max(cb.deposits.length, cb.withdrawals.length, 1);
+  const balCls = cb.balance >= 0 ? 'text-green-700' : 'text-red-700';
+
+  // Tabs
+  let html = `<div class="flex border-b mb-4 bg-white rounded-t-lg overflow-hidden">
+    <button onclick="switchTab('settle')" class="tab-btn ${currentTab === 'settle' ? 'tab-active' : ''}" data-tab="settle">
+      결산
+    </button>
+    <button onclick="switchTab('withdrawal')" class="tab-btn ${currentTab === 'withdrawal' ? 'tab-active' : ''}" data-tab="withdrawal">
+      출금 <span class="text-xs text-gray-500">(${cb.withdrawals.length})</span>
+    </button>
+    <button onclick="switchTab('deposit')" class="tab-btn ${currentTab === 'deposit' ? 'tab-active' : ''}" data-tab="deposit">
+      입금 <span class="text-xs text-gray-500">(${cb.deposits.length})</span>
+    </button>
+  </div>`;
+
+  // === 결산 탭 ===
+  html += `<div class="tab-content ${currentTab === 'settle' ? '' : 'hidden'}" id="tab-settle">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+        <div class="p-4 bg-green-50 rounded-lg">
+          <div class="text-sm text-gray-500 mb-1">총 입금</div>
+          <div class="text-2xl font-bold text-green-700">${fmt(cb.total_deposit)}</div>
+          <div class="text-xs text-gray-400 mt-1">${cb.deposits.length}건</div>
+        </div>
+        <div class="p-4 bg-red-50 rounded-lg">
+          <div class="text-sm text-gray-500 mb-1">총 출금</div>
+          <div class="text-2xl font-bold text-red-700">${fmt(cb.total_withdrawal)}</div>
+          <div class="text-xs text-gray-400 mt-1">${cb.withdrawals.length}건</div>
+        </div>
+        <div class="p-4 bg-gray-50 rounded-lg">
+          <div class="text-sm text-gray-500 mb-1">잔액</div>
+          <div class="text-2xl font-bold ${balCls}">${fmt(cb.balance)}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // === 출금 탭 ===
+  html += `<div class="tab-content ${currentTab === 'withdrawal' ? '' : 'hidden'}" id="tab-withdrawal">`;
+
+  html += `<table class="cashbook-table desktop-only"><thead>
+    <tr class="bg-gray-50 text-xs text-gray-500">
+      <th class="border px-2 py-1 col-date">일자</th>
+      <th class="border px-2 py-1 col-amount">금액</th>
+      <th class="border px-2 py-1 col-text">사용처</th>
+    </tr></thead><tbody>`;
+
+  cb.withdrawals.forEach(w => {
+    html += `<tr>
+      <td class="td-date border px-0 py-0">${dateHTML(w.id, w.date, 'withdrawal')}</td>
+      <td class="td-amount border px-0 py-0">${amountHTML(w.id, w.amount, 'withdrawal')}</td>
+      <td class="td-text border px-0 py-0"><div class="flex items-center">
+        <input type="text" value="${esc(w.vendor)}" class="edit-input flex-1" data-field="vendor" data-id="${w.id}" data-type="withdrawal">
+        <button type="button" class="btn-icon text-red-400 hover:text-red-600 text-xs px-1" onclick="delWithdrawal('${w.id}')">X</button>
+      </div></td></tr>`;
+  });
+
+  html += `<tr class="bg-red-50/30">
+    <td class="td-date border px-0 py-0">${dateHTMLNew('new-wit-date')}</td>
+    <td class="td-amount border px-0 py-0"><div style="display:flex;align-items:center;height:34px;">
+      <span style="color:#9ca3af;padding-left:8px;font-size:0.875rem;">₩</span>
+      <input type="number" id="new-wit-amount" placeholder="0" class="edit-input text-right" style="width:calc(100% - 20px);">
+    </div></td>
+    <td class="td-text border px-0 py-0"><div class="flex items-center">
+      <input type="text" id="new-wit-vendor" placeholder="사용처" class="edit-input flex-1">
+      <button type="button" onclick="addWithdrawal()" class="text-red-600 hover:text-red-800 text-xs font-medium px-2 whitespace-nowrap">+ 출금</button>
+    </div></td></tr>`;
+  html += '</tbody></table>';
+
+  // Mobile cards
+  html += '<div class="mobile-only">';
+  cb.withdrawals.forEach(w => {
+    html += `<div class="bg-white rounded-lg shadow-sm p-3 mb-2">
+      <div class="flex justify-between items-start mb-2">
+        <div class="flex-1">${dateHTML(w.id, w.date, 'withdrawal')}</div>
+        <button type="button" class="btn-icon text-red-400 hover:text-red-600 text-xs px-2 ml-2" onclick="delWithdrawal('${w.id}')">X</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-28">${amountHTML(w.id, w.amount, 'withdrawal')}</div>
+        <div class="flex-1"><input type="text" value="${esc(w.vendor)}" class="edit-input w-full" data-field="vendor" data-id="${w.id}" data-type="withdrawal" placeholder="사용처"></div>
+      </div></div>`;
+  });
+  html += `<div class="bg-red-50/50 rounded-lg p-3 mb-2">
+    <div class="flex gap-2 mb-2">${dateHTMLNew('mob-new-wit-date')}</div>
+    <div class="flex gap-2 items-center mb-2">
+      <div class="w-28"><div style="display:flex;align-items:center;height:34px;"><span style="color:#9ca3af;font-size:0.875rem;">₩</span><input type="number" id="mob-new-wit-amount" placeholder="0" class="edit-input text-right" style="width:calc(100% - 16px);"></div></div>
+      <div class="flex-1"><input type="text" id="mob-new-wit-vendor" placeholder="사용처" class="edit-input w-full"></div>
+    </div>
+    <button onclick="addWithdrawalMobile()" class="w-full bg-red-600 text-white py-2 rounded text-sm">+ 출금</button>
+  </div>`;
+  html += '</div></div>';
+
+  // === 입금 탭 ===
+  html += `<div class="tab-content ${currentTab === 'deposit' ? '' : 'hidden'}" id="tab-deposit">`;
+
+  // Desktop table
+  html += `<table class="cashbook-table desktop-only"><thead>
+    <tr class="bg-gray-50 text-xs text-gray-500">
+      <th class="border px-2 py-1 col-date">일자</th>
+      <th class="border px-2 py-1 col-amount">금액</th>
+      <th class="border px-2 py-1 col-text">비고</th>
+    </tr></thead><tbody>`;
+
+  cb.deposits.forEach(d => {
+    html += `<tr>
+      <td class="td-date border px-0 py-0">${dateHTML(d.id, d.date, 'deposit')}</td>
+      <td class="td-amount border px-0 py-0">${amountHTML(d.id, d.amount, 'deposit')}</td>
+      <td class="td-text border px-0 py-0"><div class="flex items-center">
+        <input type="text" value="${esc(d.notes)}" class="edit-input flex-1" data-field="notes" data-id="${d.id}" data-type="deposit">
+        <button type="button" class="btn-icon text-red-400 hover:text-red-600 text-xs px-1" onclick="delDeposit('${d.id}')">X</button>
+      </div></td></tr>`;
+  });
+
+  // New deposit row
+  html += `<tr class="bg-blue-50/30">
+    <td class="td-date border px-0 py-0">${dateHTMLNew('new-dep-date')}</td>
+    <td class="td-amount border px-0 py-0"><div style="display:flex;align-items:center;height:34px;">
+      <span style="color:#9ca3af;padding-left:8px;font-size:0.875rem;">₩</span>
+      <input type="number" id="new-dep-amount" placeholder="0" class="edit-input text-right" style="width:calc(100% - 20px);">
+    </div></td>
+    <td class="td-text border px-0 py-0"><div class="flex items-center">
+      <input type="text" id="new-dep-notes" placeholder="비고" class="edit-input flex-1">
+      <button type="button" onclick="addDeposit()" class="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 whitespace-nowrap">+ 입금</button>
+    </div></td></tr>`;
+  html += '</tbody></table>';
+
+  // Mobile cards
+  html += '<div class="mobile-only">';
+  cb.deposits.forEach(d => {
+    html += `<div class="bg-white rounded-lg shadow-sm p-3 mb-2">
+      <div class="flex justify-between items-start mb-2">
+        <div class="flex-1">${dateHTML(d.id, d.date, 'deposit')}</div>
+        <button type="button" class="btn-icon text-red-400 hover:text-red-600 text-xs px-2 ml-2" onclick="delDeposit('${d.id}')">X</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-28">${amountHTML(d.id, d.amount, 'deposit')}</div>
+        <div class="flex-1"><input type="text" value="${esc(d.notes)}" class="edit-input w-full" data-field="notes" data-id="${d.id}" data-type="deposit" placeholder="비고"></div>
+      </div></div>`;
+  });
+  html += `<div class="bg-blue-50/50 rounded-lg p-3 mb-2">
+    <div class="flex gap-2 mb-2">${dateHTMLNew('mob-new-dep-date')}</div>
+    <div class="flex gap-2 items-center mb-2">
+      <div class="w-28"><div style="display:flex;align-items:center;height:34px;"><span style="color:#9ca3af;font-size:0.875rem;">₩</span><input type="number" id="mob-new-dep-amount" placeholder="0" class="edit-input text-right" style="width:calc(100% - 16px);"></div></div>
+      <div class="flex-1"><input type="text" id="mob-new-dep-notes" placeholder="비고" class="edit-input w-full"></div>
+    </div>
+    <button onclick="addDepositMobile()" class="w-full bg-blue-600 text-white py-2 rounded text-sm">+ 입금</button>
+  </div>`;
+  html += '</div></div>';
+
+  document.getElementById('cashbook-root').innerHTML = html;
+
+  document.querySelectorAll('.edit-input[data-id]').forEach(el => {
+    el.addEventListener('change', () => handleEdit(el));
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  loadCashbook();
+}
+
+function handleEdit(el) {
+  const { id, type } = el.dataset;
+  const row = el.closest('tr') || el.closest('.bg-white');
+  const data = {};
+
+  row.querySelectorAll('input[data-field="date"]').forEach(i => { data.date = i.value; });
+  const amtEl = row.querySelector('[data-field="amount"]');
+  if (amtEl) data.amount = Number(amtEl.dataset.raw || amtEl.value || '0');
+  row.querySelectorAll('input[data-field="notes"], input[data-field="vendor"]').forEach(i => {
+    data[i.dataset.field] = i.value;
+  });
+  if (data.date) data.date = toDisplayDate(data.date);
+
+  const save = type === 'deposit' ? API.editDeposit(id, data) : API.editWithdrawal(id, data);
+  save.then(() => loadCashbook()).catch(e => alert('저장 실패: ' + e.message));
+}
+
+async function addDeposit() {
+  const date = document.getElementById('new-dep-date').value;
+  const amount = document.getElementById('new-dep-amount').value;
+  const notes = document.getElementById('new-dep-notes').value;
+  if (!date && !amount) return;
+  await API.addDeposit({ date: toDisplayDate(date), amount: Number(amount), notes });
+  await loadCashbook();
+}
+
+async function addWithdrawal() {
+  const date = document.getElementById('new-wit-date').value;
+  const amount = document.getElementById('new-wit-amount').value;
+  const vendor = document.getElementById('new-wit-vendor').value;
+  if (!date && !amount) return;
+  await API.addWithdrawal({ date: toDisplayDate(date), amount: Number(amount), vendor });
+  await loadCashbook();
+}
+
+async function addDepositMobile() {
+  const date = document.getElementById('mob-new-dep-date').value;
+  const amount = document.getElementById('mob-new-dep-amount').value;
+  const notes = document.getElementById('mob-new-dep-notes').value;
+  if (!date && !amount) return;
+  await API.addDeposit({ date: toDisplayDate(date), amount: Number(amount), notes });
+  await loadCashbook();
+}
+
+async function addWithdrawalMobile() {
+  const date = document.getElementById('mob-new-wit-date').value;
+  const amount = document.getElementById('mob-new-wit-amount').value;
+  const vendor = document.getElementById('mob-new-wit-vendor').value;
+  if (!date && !amount) return;
+  await API.addWithdrawal({ date: toDisplayDate(date), amount: Number(amount), vendor });
+  await loadCashbook();
+}
+
+async function delDeposit(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await API.delDeposit(id);
+  await loadCashbook();
+}
+
+async function delWithdrawal(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await API.delWithdrawal(id);
+  await loadCashbook();
+}
+
+async function loadCashbook() {
+  try {
+    const cb = await API.getCashbook();
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('app-view').classList.remove('hidden');
+    render(cb);
+  } catch (e) {
+    document.getElementById('login-error').textContent = '접속 실패: ' + e.message;
+    document.getElementById('login-error').classList.remove('hidden');
+    document.getElementById('app-view').classList.add('hidden');
+    document.getElementById('login-view').classList.remove('hidden');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const key = localStorage.getItem('cb_key');
+  if (key) {
+    document.getElementById('api-key').value = key;
+    API.apiKey = key;
+    loadCashbook();
+  }
+});
+</script>
+</body>
+</html>
