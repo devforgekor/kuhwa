@@ -6,3 +6,5 @@ __pycache__/
 apps/cashbook/data/
 *.bak.*
 *.bak
+.venv/
+etxfetch/.venv/
