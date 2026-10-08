@@ -1,0 +1,215 @@
+# 표준: host nginx 가 유일한 80/443 종착지 (Mozilla Intermediate + 보안 헤더)
+# 라우팅: /                       → 정적 포털
+#         /app/etextbook/         → 전자교과서 (완전 프리픽스 + on-demand 캐시)
+#         /app/pdf/               → pdf2sheet (기존 /pdf/ 및 pdfkuhwa 서브도메인 흡수)
+#         /ebook/ /viewer/ /resource/ /_share/ /pdf/ → 신규 경로로 301 (북마크 보호)
+#
+# 전자교과서 캐시: /data/cache/app/etextbook/ (URL 미러)
+#   miss 시 @etx_fetch → etxfetch(127.0.0.1:8090) 가 object storage 에서 받아
+#   캐시에 쓰고 X-Accel-Redirect 로 돌려준다.
+
+server {
+	listen 80;
+	listen [::]:80;
+	server_name kuhwa.duckdns.org;
+
+	limit_req zone=general burst=40 nodelay;
+	limit_conn addr 20;
+	include /etc/nginx/snippets/security-headers.conf;
+
+	# ACME HTTP-01 웹루트 (standalone 종속성 제거)
+	location /.well-known/acme-challenge/ {
+		root /var/www/certbot;
+	}
+
+	location / {
+		return 301 https://$host$request_uri;
+	}
+}
+
+server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+	server_name kuhwa.duckdns.org;
+
+	ssl_certificate     /etc/letsencrypt/live/kuhwa.duckdns.org/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/kuhwa.duckdns.org/privkey.pem;
+
+	client_max_body_size 64m;
+	limit_req zone=general burst=40 nodelay;
+	limit_conn addr 20;
+	include /etc/nginx/snippets/security-headers.conf;
+
+	root  /var/www/kuhwa;
+	index index.html;
+
+	# --- 정적 포털 ---
+	location / {
+		try_files $uri $uri/ =404;
+	}
+
+	# ============================================================
+	# 전자교과서 — 완전 프리픽스 /app/etextbook/
+	# ============================================================
+
+	# 진입 → 단원선택 홈 (뷰어에 contentInformationURL 을 줘야 콘텐츠를 찾는다)
+	# 뷰어를 직접 열면 설정의 자리표시자 content.url="./books/ebook" 를 써서
+	# fileNotExist 팝업("다운로드 받지 않은 단원입니다") 으로 떨어진다.
+	location = /app/etextbook {
+		return 301 /app/etextbook/resource/include/main/index.html;
+	}
+	location = /app/etextbook/ {
+		return 301 /app/etextbook/resource/include/main/index.html;
+	}
+
+	# 파라미터 없는 뷰어 디렉토리 직접 진입도 동일하게 홈으로
+	location = /app/etextbook/viewer/ebook {
+		return 301 /app/etextbook/resource/include/main/index.html;
+	}
+	location = /app/etextbook/viewer/ebook/ {
+		return 301 /app/etextbook/resource/include/main/index.html;
+	}
+
+	# 뷰어 셸 — 컨테이너가 이미지 내장 viewer 를 서빙 (prefix 만 제거)
+	location /app/etextbook/viewer/ {
+		proxy_pass http://127.0.0.1:8081/viewer/;
+		proxy_http_version 1.1;
+		proxy_set_header Host              $host;
+		proxy_set_header X-Real-IP         $remote_addr;
+		proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		# upstream 이 압축하면 sub_filter 가 본문을 못 읽는다
+		proxy_set_header Accept-Encoding   "";
+		proxy_cache_bypass $http_upgrade;
+		proxy_read_timeout 300s;
+		limit_req zone=general burst=200 nodelay;
+		limit_conn addr 200;
+		include /etc/nginx/snippets/etextbook-subfilter.conf;
+	}
+
+	# 裸 디렉토리(트레일링 슬래시)는 index.html 을 직접 서빙한다.
+	# try_files $uri 는 디렉토리를 매칭 못 해 @etx_fetch 로 떨어져 502 가 났다.
+	location = /app/etextbook/resource/ {
+		root /data/cache;
+		index index.html;
+		open_file_cache_errors off;
+		limit_conn addr 200;
+	}
+
+	# 콘텐츠 — host 캐시, miss 시 etxfetch
+	location /app/etextbook/resource/ {
+		root /data/cache;
+		# 전역 open_file_cache_errors on 이 ENOENT 를 30s 캐시해
+		# X-Accel 재요청이 또 미스 → 무한루프에 빠진다. 위치 단위로 끈다.
+		open_file_cache_errors off;
+		limit_req zone=general burst=200 nodelay;
+		limit_conn addr 200;
+		index index.html;
+		include /etc/nginx/snippets/etextbook-subfilter.conf;
+		try_files $uri @etx_fetch;
+	}
+
+	# 공유 에셋 (뷰어의 루트절대경로 /_share/ 가 여기로 온다)
+	location /app/etextbook/_share/ {
+		root /data/cache;
+		open_file_cache_errors off;
+		limit_req zone=general burst=200 nodelay;
+		limit_conn addr 200;
+		include /etc/nginx/snippets/etextbook-subfilter.conf;
+		try_files $uri @etx_fetch;
+	}
+
+	location /app/etextbook/ {
+		root /data/cache;
+		open_file_cache_errors off;
+		limit_req zone=general burst=200 nodelay;
+		limit_conn addr 200;
+		index index.html;
+		include /etc/nginx/snippets/etextbook-subfilter.conf;
+		try_files $uri $uri/ @etx_fetch;
+	}
+
+	# 캐시 미스 → etxfetch (파일을 받아 캐시에 쓰고 X-Accel-Redirect)
+	# limit_conn 이 서버 수준(20) 그대로면 miss 가 몰릴 때 429 로 막힌다.
+	location @etx_fetch {
+		proxy_pass http://127.0.0.1:8090;
+		proxy_set_header Host              $host;
+		proxy_set_header X-Real-IP         $remote_addr;
+		proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header X-Original-URI    $uri;
+		proxy_connect_timeout 5s;
+		proxy_read_timeout 300s;
+		proxy_send_timeout 300s;
+		limit_conn addr 200;
+	}
+
+	# ============================================================
+	# PDF 변환 도구 — /app/pdf/ (기존 /pdf/ 및 pdfkuhwa 흡수)
+	# ============================================================
+	location = /app/pdf {
+		return 301 /app/pdf/;
+	}
+
+	location /app/pdf/ {
+		proxy_pass http://127.0.0.1:8000/;
+		proxy_http_version 1.1;
+		proxy_set_header Host              $host;
+		proxy_set_header X-Real-IP         $remote_addr;
+		proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Accept-Encoding   "";
+		proxy_redirect ~^/(.*)$ /app/pdf/$1;
+		proxy_read_timeout    300s;
+		proxy_send_timeout    300s;
+		proxy_request_buffering on;
+
+		# 앱이 절대경로(/login, /static 등)를 출력하므로 /app/pdf 접두로 재작성
+		# sub_filter_types 는 text/html 에 추가된다(nginx 동작 실측 확인)
+		sub_filter_types application/javascript;
+		sub_filter 'href="/'                      'href="/app/pdf/';
+		sub_filter 'src="/'                       'src="/app/pdf/';
+		sub_filter 'action="/'                    'action="/app/pdf/';
+		sub_filter 'window.location = "/'         'window.location = "/app/pdf/';
+		sub_filter 'window.location="/'           'window.location="/app/pdf/';
+		sub_filter 'location.href = "/'           'location.href = "/app/pdf/';
+		sub_filter 'location.href="/'             'location.href="/app/pdf/';
+		sub_filter "fetch('/"                     "fetch('/app/pdf/";
+		sub_filter 'fetch("/'                     'fetch("/app/pdf/';
+		sub_filter_once off;
+	}
+
+	# ============================================================
+	# 품목내역 생성기 (쿠팡 장바구니∩결제 교집합) — 정적 ~/app/edufinebot/public
+	# ============================================================
+	location = /app/edufinebot {
+		return 301 /app/edufinebot/;
+	}
+	location /app/edufinebot/ {
+		alias /var/www/edufinebot/;
+		index index.html;
+	}
+
+	# ============================================================
+	# 구 경로 → 신 경로 301 (기존 북마크 보호)
+	# 정규식 location 은 prefix 보다 뒤에서 평가되므로 /app/* 를 침범하지 않는다.
+	# ============================================================
+	location ~ ^/ebook/?$ {
+		return 301 /app/etextbook/resource/include/main/index.html;
+	}
+	location ~ ^/viewer/(.*)$ {
+		return 301 /app/etextbook/viewer/$1$is_args$args;
+	}
+	location ~ ^/resource/(.*)$ {
+		return 301 /app/etextbook/resource/$1$is_args$args;
+	}
+	location ~ ^/_share/(.*)$ {
+		return 301 /app/etextbook/_share/$1$is_args$args;
+	}
+	location = /pdf {
+		return 301 /app/pdf/;
+	}
+	location ~ ^/pdf/(.*)$ {
+		return 301 /app/pdf/$1$is_args$args;
+	}
+}
