@@ -3,6 +3,6 @@ node_modules
 .env
 __pycache__/
 *.pyc
-cashbook/data/
+apps/cashbook/data/
 *.bak.*
 *.bak

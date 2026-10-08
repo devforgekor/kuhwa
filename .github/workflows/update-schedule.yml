@@ -8,6 +8,11 @@ on:
 jobs:
   update-schedule:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        # 학사일정 앱은 apps/schedule 아래에 있다 (2026-10-08 모노레포 재편).
+        # git 명령도 하위 디렉토리에서 실행해 경로해석이 앱 기준으로 일치한다.
+        working-directory: apps/schedule
     steps:
       - name: Checkout
         uses: actions/checkout@v4
