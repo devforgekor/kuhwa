@@ -1,0 +1,108 @@
+# kuhwa 서비스 전체 정의 — CIS Docker Benchmark / OWASP 컨테이너 하드닝 적용
+# 포트 정책: host nginx가 유일한 80/443 종착지, 컨테이너는 루프백(8081) 또는 임시 공개(8000)만 사용
+# 실행: docker compose -f /opt/kuhwa/docker-compose.yml up -d
+name: kuhwa
+
+services:
+  pdf2sheet:
+    image: pdf2sheet:latest
+    container_name: pdf2sheet
+    restart: unless-stopped
+    ports:
+      # 사용자 결정: 0.0.0.0:8000 유지 (클라우드 보안리스트가 8000 미개방 → 외부 직접접속 차단)
+      - "0.0.0.0:8000:8000"
+    # /app/pdf 하위 경로 역프록시에 맞춰 앱이 URL 을 생성하도록 root_path 지정
+    # (host nginx 의 sub_filter 와 겹치지 않는지 재기동 후 반드시 실측 확인할 것)
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--root-path", "/app/pdf"]
+    env_file:
+      - /home/ubuntu/pdf-to-spreadsheet/.env
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      TMPDIR: /tmp
+    # --- 하드닝 ---
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=512m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # --- 자원 제한 ---
+    mem_limit: 2g
+    mem_reservation: 512m
+    cpus: 1.5
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/docs', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - /home/ubuntu/pdf-to-spreadsheet/uploads:/app/uploads
+      - /home/ubuntu/pdf-to-spreadsheet/output:/app/output
+      - /home/ubuntu/pdf-to-spreadsheet/instance:/app/instance
+      - /home/ubuntu/.oci:/home/ubuntu/.oci:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    networks:
+      - kuhwa
+
+  etextbook:
+    image: etextbook-viewer:latest
+    container_name: etextbook
+    restart: unless-stopped
+    ports:
+      # 443/80은 host nginx에서 종결(TLS) — 컨테이너는 루프백 8081만
+      - "127.0.0.1:8081:80"
+    # --- 하드닝 ---
+    read_only: true
+    tmpfs:
+      # conf.d 를 tmpfs 로 덮어써 이미지 기본 default.conf 중복 서버블록 제거 + 엔트리포인트 쓰기 허용
+      - /etc/nginx/conf.d:rw,noexec,nosuid,size=1m,mode=1755
+      - /var/run:rw,noexec,nosuid,size=16m,mode=1777
+      - /var/cache/nginx:rw,noexec,nosuid,size=64m,mode=1777
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # nginx 마스터(root)가 /var/cache/nginx 소유권을 uid 101 로 넘기고 worker 로 강등하므로
+    # CHOWN/SETUID/SETGID 최소만 부여
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
+    # --- 자원 제한 ---
+    mem_limit: 256m
+    mem_reservation: 64m
+    cpus: 0.5
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    # resource 마운트 제거 — /app/etextbook/resource/ 는 host nginx 가
+    # /data/cache 에서 서빙하고, miss 시 etxfetch(8090) 가 object storage 에서 받아온다.
+    # 컨테이너 이미지의 내장 /viewer 만 남는다(뷰어 셸).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    networks:
+      - kuhwa
+
+networks:
+  kuhwa:
+    driver: bridge

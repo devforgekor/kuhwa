@@ -4,3 +4,5 @@ node_modules
 __pycache__/
 *.pyc
 cashbook/data/
+*.bak.*
+*.bak

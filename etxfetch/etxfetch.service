@@ -1,0 +1,49 @@
+[Unit]
+Description=kuhwa ebook on-demand cache fetcher (object storage -> /data/cache)
+Documentation=file:///opt/kuhwa/etxfetch/etxfetch.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+# 그룹을 www-data 로 지정해 캐시 파일을 ubuntu:www-data 로 생성한다
+# (nginx worker = www-data 가 읽을 수 있도록)
+Group=www-data
+WorkingDirectory=/opt/kuhwa/etxfetch
+ExecStart=/usr/bin/python3 /opt/kuhwa/etxfetch/etxfetch.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# 파일 생성 권한: dir 0750 / file 0640 (etxfetch.py 가 umask 0027 설정)
+UMask=0027
+
+# 캐시 상한 (GiB). 초과 시 오래된 unit(LRU)을 통째로 삭제한다.
+# 보호 대상: base(include/ebook/1), share(_share) — 이것들은 eviction 되지 않는다.
+Environment=ETX_CACHE_CAP_GIB=5
+
+# --- 하드닝 ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/data/cache /var/lib/etxfetch
+# ~/.oci/config + oci_api_key.pem 읽기 위해 false 유지
+ProtectHome=false
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# 스트리밍 다운로드라 실사용 RSS 는 ~50MB (대형 mp4 277MiB 실측)
+MemoryMax=768M
+TasksMax=128
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
