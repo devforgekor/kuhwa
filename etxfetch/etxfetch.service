@@ -28,7 +28,8 @@ Environment=ETX_CACHE_CAP_GIB=5
 NoNewPrivileges=true
 ProtectSystem=strict
 ReadWritePaths=/data/cache /var/lib/etxfetch
-# ~/.oci/config + oci_api_key.pem 읽기 위해 false 유지
+# oci SDK 가 ~/.local (사용자 site-packages)에만 설치되어 있어 홈을 숨기면 import 실패.
+# 해소하려면 venv 로 전환 후 ProtectHome=true 로 강화 — P3 후속 과제.
 ProtectHome=false
 PrivateTmp=true
 ProtectKernelTunables=true

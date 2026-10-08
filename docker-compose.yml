@@ -44,7 +44,7 @@ services:
       - /home/ubuntu/pdf-to-spreadsheet/uploads:/app/uploads
       - /home/ubuntu/pdf-to-spreadsheet/output:/app/output
       - /home/ubuntu/pdf-to-spreadsheet/instance:/app/instance
-      - /home/ubuntu/.oci:/home/ubuntu/.oci:ro
+      # OCI API 키 마운트 제거 — 앱은 Instance_principals 로 전환 (2026-10-08)
     logging:
       driver: json-file
       options:

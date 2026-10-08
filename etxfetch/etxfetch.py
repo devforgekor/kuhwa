@@ -37,8 +37,6 @@ CACHE_ROOT = Path("/data/cache/app/etextbook")
 URI_PREFIX = "/app/etextbook"
 BUCKET = "etextbook-test"
 NAMESPACE = "nrhe1zafhd0v"
-OCI_CONFIG = Path.home() / ".oci/config"
-
 CACHE_CAP = int(float(os.environ.get("ETX_CACHE_CAP_GIB", "5")) * 1024**3)
 HOST, PORT = "127.0.0.1", 8090
 LOW_WORKERS = 3
@@ -58,14 +56,26 @@ def log(msg: str) -> None:
 
 
 # ------------------------------------------------------------------ oci
-_cfg = oci.config.from_file(str(OCI_CONFIG))
+# 인스턴스 자격증(Instance Principals) 사용. 서버에 API 키/설정파일을 두지 않는다.
+# 전제: dynamic group `kuhwa-instance` + policy `kuhwa-instance-principals`
+#       (allow dynamic-group kuhwa-instance to manage object-family in tenancy)
 _tls = threading.local()
+
+
+def _signer():
+    # 스레드마다 하나씩. SecurityTokenSigner 는 만료 시 sign() 중 자동 갱신한다.
+    s = getattr(_tls, "signer", None)
+    if s is None:
+        s = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
+        _tls.signer = s
+    return s
 
 
 def client():
     c = getattr(_tls, "client", None)
     if c is None:
-        c = oci.object_storage.ObjectStorageClient(_cfg)
+        s = _signer()
+        c = oci.object_storage.ObjectStorageClient(config={}, signer=s, region=s.region)
         _tls.client = c
     return c
 
