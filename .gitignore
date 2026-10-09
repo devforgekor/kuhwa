@@ -7,4 +7,4 @@ apps/cashbook/data/
 *.bak.*
 *.bak
 .venv/
-etxfetch/.venv/
+etxfetch/.venv*/

@@ -1,0 +1,6 @@
+[project]
+name = "etxfetch"
+version = "0.1.0"
+description = "kuhwa ebook on-demand cache fetcher (OCI object storage)"
+requires-python = ">=3.12,<3.13"
+dependencies = ["oci==2.187.2"]
