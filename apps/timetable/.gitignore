@@ -61,4 +61,6 @@ htmlcov/
 # Runtime
 *.pid
 *.lock
+# uv 프로젝트 잠금파일은 반드시 추적한다 (의존성 재현성)
+!uv.lock
 .env*

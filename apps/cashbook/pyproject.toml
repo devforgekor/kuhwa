@@ -1,0 +1,11 @@
+[project]
+name = "cashbook"
+version = "0.1.0"
+description = "kuhwa cashbook site (Vercel: mini-cashbook)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.32",
+    "uvicorn[standard]>=0.53.0",
+]
