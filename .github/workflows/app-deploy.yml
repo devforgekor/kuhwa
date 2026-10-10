@@ -2,7 +2,10 @@ name: App deploy (schedule · edufinebot · nginx · systemd)
 
 # 계획서 6장 Phase3 — 자체호스팅 이관 배포
 #   apps/schedule/public/ → /var/www/schedule/   (정적 학사일정 + 정적 calendar.ics)
-#   apps/edufinebot/      → /var/www/edufinebot/  (품목내역 생성기)
+#   apps/edufinebot/public/ → /var/www/edufinebot/ (품목내역 생성기)
+#     ※ 소스 끝 슬래시가 핵심 — 'apps/edufinebot/public/' 로 써야 내용물이 루트로 복사된다.
+#        (예전엔 'apps/edufinebot/' 를 소스로 써서 public/, tests/ 가 웹루트 밑에 쌓였고
+#         nginx 는 구버전 상위 index.html 을 계속 서빙했다)
 #   deploy/nginx/kuhwa    → sites-available (nginx -t 실패 시 자동 롤백)
 #   deploy/systemd/*.service → /etc/systemd/system (변경 시에만 재시작)
 on:
@@ -39,7 +42,7 @@ jobs:
           rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
             apps/schedule/public/ kuhwa:/var/www/schedule/
           rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
-            apps/edufinebot/ kuhwa:/var/www/edufinebot/
+            apps/edufinebot/public/ kuhwa:/var/www/edufinebot/
 
       - name: nginx · systemd 반영 (nginx -t 실패 시 롤백)
         run: |
