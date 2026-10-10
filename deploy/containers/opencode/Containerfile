@@ -12,8 +12,9 @@ ENV HOME=/home/ubuntu \
     UV_TOOL_BIN_DIR=/home/ubuntu/.cache/uv/bin \
     UV_PYTHON_INSTALL_DIR=/home/ubuntu/.cache/uv/python
 
-# [WHY] host .gitconfig 는 credential.helper(git-credential-kv.py) 가 컨테이너에
-#   없어 미마운트 한다. 컨테이너는 커밋만 담당하고 push 는 host 에서 한다.
+# [WHY] host .gitconfig 는 컨테이너에 미마운트한다 — push 는 host 에서 SSH(절대경로 키)로
+#   수행하고 컨테이너는 커밋만 담당한다. (과거의 credential.helper 방식은 2026-10-10 SSH
+#   전환과 함께 helper 파일 삭제로 폐지 — 컨테이너에 인증수단을 주지 않는다.)
 RUN git config --system user.name kuhwa \
  && git config --system user.email mesids@kuhwa.sen.sc.kr \
  && mkdir -p /home/ubuntu/.cache /home/ubuntu/.config /home/ubuntu/.local \
