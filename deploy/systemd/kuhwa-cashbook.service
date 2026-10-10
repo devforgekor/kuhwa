@@ -1,0 +1,32 @@
+[Unit]
+Description=kuhwa cashbook (FastAPI, Phase3 D2(b) 이관)
+Documentation=https://kuhwa.duckdns.org/cashbook/
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/kuhwa/apps/cashbook
+EnvironmentFile=/etc/kuhwa/cashbook.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kuhwa/apps/cashbook/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8092 --root-path /cashbook
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# --- 하드닝 (etxfetch.service 패턴 계승) ---
+# data/ 는 앱이 직접 갱신하므로 ProtectSystem=strict 예외 필수 (storage.py:36)
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/kuhwa/apps/cashbook/data
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

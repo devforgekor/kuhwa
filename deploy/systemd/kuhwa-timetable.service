@@ -1,0 +1,32 @@
+[Unit]
+Description=kuhwa timetable (FastAPI, Phase3 자체호스팅)
+Documentation=https://kuhwa.duckdns.org/timetable/
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/kuhwa/apps/timetable
+EnvironmentFile=-/etc/kuhwa/timetable.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kuhwa/apps/timetable/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8091 --root-path /timetable
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# --- 하드닝 (etxfetch.service 패턴 계승) ---
+# --root-path 는 nginx 가 붙인 /timetable 접두를 앱에 알리는 용도(11장 검증).
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/kuhwa/timetable
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

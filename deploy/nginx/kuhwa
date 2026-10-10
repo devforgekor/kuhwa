@@ -2,6 +2,9 @@
 # 라우팅: /                       → 정적 포털
 #         /app/etextbook/         → 전자교과서 (완전 프리픽스 + on-demand 캐시)
 #         /app/pdf/               → pdf2sheet (기존 /pdf/ 및 pdfkuhwa 서브도메인 흡수)
+#         /schedule/              → 정적 학사일정 (var/www/schedule + 정적 calendar.ics)
+#         /timetable/ · /cashbook/ → 자체호스팅 uvicorn (8091 / 8092, systemd)
+#         /edufinebot/            → /app/edufinebot/ 로 301 (트레일링 슬래시)
 #         /ebook/ /viewer/ /resource/ /_share/ /pdf/ → 신규 경로로 301 (북마크 보호)
 #
 # 전자교과서 캐시: /data/cache/app/etextbook/ (URL 미러)
@@ -188,6 +191,74 @@ server {
 	location /app/edufinebot/ {
 		alias /var/www/edufinebot/;
 		index index.html;
+	}
+
+	# ============================================================
+	# Phase3 자체호스팅 (계획서 6장(a)) — schedule / timetable / cashbook
+	#   2026-10-10 실측 + 스크래치 검증 통과. 기존 /app/* ·301 블록은 불변.
+	# ============================================================
+
+	# bare → 정규 슬래시
+	location = /schedule  { return 301 /schedule/; }
+	location = /timetable { return 301 /timetable/; }
+	location = /cashbook  { return 301 /cashbook/; }
+	location = /edufinebot { return 301 /app/edufinebot/; }	# bare → 정규 슬래시 (기존 = /app/edufinebot 는 별개)
+	# (5c-3) "= " 정확일치는 /edufinebot/ 를 못 잡아 404 였음 → prefix 로 보완
+	location /edufinebot/ { rewrite ^/edufinebot(/.*)?$ /app/edufinebot$1 permanent; }
+
+	# --- schedule: 정적 (root 패턴 — alias+try_files 함정 회피) ---
+	location /schedule/ {
+		root /var/www;                 # → /var/www/schedule/...
+		index index.html;
+		try_files $uri $uri/ =404;
+	}
+
+	# 정적 .ics (fetch-schedule.js 가 선생성, 2026-10-10 사용자 결정)
+	# nginx mime.types(93행)에 ics 매핑이 없어 기본 type 이 octet-stream 이 되므로 명시.
+	location = /schedule/data/calendar.ics {
+		root /var/www;
+		types { text/calendar ics; }
+		default_type text/calendar;
+	}
+	# 기존 ICS 구독 경로 보존 (kuhwa /api/calendar.ics 는 현재 404)
+	location = /api/calendar.ics { return 301 /schedule/data/calendar.ics; }
+
+	# --- timetable: FastAPI (kuhwa-timetable.service, 127.0.0.1:8091) ---
+	# --root-path 는 scope/url_for/OAuth redirect_uri 에만 반영되고, HTML 리터럴과
+	# RedirectResponse("/calendar/login") 에는 반영되지 않는다(2026-10-10 실측).
+	# 그래서 sub_filter(본문) + proxy_redirect(Location) 으로 /timetable 접두를 다시 붙인다.
+	location /timetable/ {
+		proxy_pass http://127.0.0.1:8091/;      # URI 포함 → location 접두 치환
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Accept-Encoding "";      # sub_filter 가 본문을 읽으려면 업스트림 gzip 해제 필수
+		proxy_redirect ~^/(.*)$ /timetable/$1;    # 상대 Location 재접두
+		sub_filter 'href="/'   'href="/timetable/';
+		sub_filter 'action="/' 'action="/timetable/';
+		sub_filter_once off;                      # 기본 on → 모든 occurrence 를 바꾸려면 off
+		# sub_filter_types 는 지정하지 않는다 — 기본 text/html, 명시하면 duplicate MIME warn
+	}
+
+	# --- cashbook: FastAPI (kuhwa-cashbook.service, 127.0.0.1:8092, D2(b) 이관) ---
+	# 템플릿 절대경로 9종(href/action/hx-*) + RedirectResponse("/login") → 동일 처리
+	location /cashbook/ {
+		proxy_pass http://127.0.0.1:8092/;      # URI 포함 → location 접두 치환
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Accept-Encoding "";
+		proxy_redirect ~^/(.*)$ /cashbook/$1;
+		sub_filter 'href="/'      'href="/cashbook/';
+		sub_filter 'action="/'    'action="/cashbook/';
+		sub_filter 'hx-put="/'    'hx-put="/cashbook/';
+		sub_filter 'hx-post="/'   'hx-post="/cashbook/';
+		sub_filter 'hx-delete="/' 'hx-delete="/cashbook/';
+		sub_filter_once off;
 	}
 
 	# ============================================================
