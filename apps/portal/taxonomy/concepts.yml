@@ -6,12 +6,15 @@
 # - type은 "배포/운영 형태"만 나타낸다. 서비스가 아니라 문서/저장소도 개념으로 포함된다.
 # - tech는 런타임·구성 기술 한정(내부 구성요소 포함). Wappalyzer로 확인 가능한
 #   외부 노출 기술은 observable 성질일 뿐 — 런타임 전체를 대표하지 않는다.
+# - observable은 **외부에서 실제로 측정된 신호**만 기록한다 (응답헤더·HTML·응답본문 한정).
+#   내부 런타임은 미확인이므로 추정하지 않는다. 측정 근거는 tech 에 별도 표기한다.
+#   최종 실측: 2026-10-10 (Phase4, kuhwa.duckdns.org 전 경로 HEAD/GET 실측)
 
 scheme:
   id: kuhwa
   label: kuhwa
-  version: 2
-  updated: 2026-10-08
+  version: 3
+  updated: 2026-10-10
 
 types:                     # 유형 용어집 (통제어휘) — vercel 타입 폐기(2026-10-08): 전 서비스 자체호스팅
   - { id: self-hosted,   label: "자체호스팅" }
@@ -31,6 +34,7 @@ concepts:
     path: /schedule/
     type: self-hosted
     tech: [nginx, static, neis-api]        # 데이터는 GH Actions가 저장소 public/data/{year}.json 선제작
+    observable: [nginx, http2]             # 서버헤더=nginx(버전 미노출)·외부스크립트 0·프레임워크 지문 0
     # 구(舊) 오리진: https://kuhwa.vercel.app/ — 이관 후 접근 차단
     related: [timetable, etextbook]
 
@@ -40,7 +44,8 @@ concepts:
     description: 학기 시간표와 캘린더 동기화.
     path: /timetable/
     type: self-hosted
-    tech: [nginx, static]
+    tech: [nginx, python, fastapi, uvicorn, systemd]   # Phase3 실측: 정적 아님 — kuhwa:8091 uvicorn(systemd) + nginx proxy
+    observable: [nginx, fastapi-error-body]            # HEAD 405 · content-type application/json · content-length:31 (={"detail":"Method Not Allowed"})
     # 구(舊) 오리진: https://mini-timetable.vercel.app/ — 이관 후 접근 차단
     related: [schedule]
 
@@ -50,7 +55,8 @@ concepts:
     description: 나이스 에듀파인 예산 사용 내역을 수기로 기록·관리합니다.
     path: /cashbook/
     type: self-hosted
-    tech: [nginx, static]
+    tech: [nginx, python, fastapi, uvicorn, systemd]   # Phase3 실측: kuhwa:8092 uvicorn(systemd) + nginx proxy
+    observable: [nginx, fastapi-error-body, tailwind-cdn]  # /cashbook/login 이 https://cdn.tailwindcss.com 로드 — 외부 3자 의존(가용성·프라이버시 주의)
     # 구(舊) 오리진: https://mini-cashbook.vercel.app/ — 이관 후 접근 차단
 
   # ---- L0: 교육 도구 ----
@@ -65,6 +71,7 @@ concepts:
     path: /app/etextbook/
     type: self-hosted
     tech: [nginx, docker, epub3, etxfetch, object-storage]   # 내부 캐시 파이프라인 포함
+    observable: [nginx, http2]             # /app/etextbook/ →301 → resource/include/main/index.html, relative 스크립트만
     related: [schedule]
 
   - id: pdf2sheet
@@ -74,14 +81,16 @@ concepts:
     path: /app/pdf/
     type: self-hosted
     tech: [fastapi, docker, uvicorn]
+    observable: [nginx, fastapi-error-body]  # HEAD 405 · {"detail":...} (devforge에서 런타임, nginx proxy)
 
   - id: edufinebot
     label: 품목내역 생성기
     broader: education-tools
     description: 에듀파인 물품 품의 내역서를 웹페이지 파싱으로 자동 작성합니다(엑셀 출력).
-    path: /edufinebot/            # 정식 경로. nginx가 /app/edufinebot/ 로 301 (Phase3)
+    path: /edufinebot/            # 별칭 — nginx 가 /app/edufinebot/ 로301 (2026-10-10 실측). 정규 서빙 경로는 /app/edufinebot/
     type: self-hosted
-    tech: [javascript, static-parser]
+    tech: [javascript, static-parser, exceljs]   # vendor/exceljs.min.js 를 번들로 직접 서빙
+    observable: [nginx, exceljs-vendor]
 
   # ---- L0: 자료실 ----
   - id: library
