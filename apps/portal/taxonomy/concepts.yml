@@ -8,12 +8,12 @@
 #   외부 노출 기술은 observable 성질일 뿐 — 런타임 전체를 대표하지 않는다.
 # - observable은 **외부에서 실제로 측정된 신호**만 기록한다 (응답헤더·HTML·응답본문 한정).
 #   내부 런타임은 미확인이므로 추정하지 않는다. 측정 근거는 tech 에 별도 표기한다.
-#   최종 실측: 2026-10-10 (Phase4, kuhwa.duckdns.org 전 경로 HEAD/GET 실측)
+#   최종 실측: 2026-10-10 (Phase5, kuhwa.duckdns.org 전 경로 HEAD/POST/GET 실측)
 
 scheme:
   id: kuhwa
   label: kuhwa
-  version: 3
+  version: 4
   updated: 2026-10-10
 
 types:                     # 유형 용어집 (통제어휘) — vercel 타입 폐기(2026-10-08): 전 서비스 자체호스팅
@@ -45,7 +45,7 @@ concepts:
     path: /timetable/
     type: self-hosted
     tech: [nginx, python, fastapi, uvicorn, systemd]   # Phase3 실측: 정적 아님 — kuhwa:8091 uvicorn(systemd) + nginx proxy
-    observable: [nginx, fastapi-error-body]            # HEAD 405 · content-type application/json · content-length:31 (={"detail":"Method Not Allowed"})
+    observable: [nginx, fastapi-error-body]            # POST 405 · application/json · content-length:31 (={"detail":"Method Not Allowed"}) — HEAD 는 200 (Phase5, 12건 중 8건 HEAD 허용)
     # 구(舊) 오리진: https://mini-timetable.vercel.app/ — 이관 후 접근 차단
     related: [schedule]
 
@@ -56,7 +56,7 @@ concepts:
     path: /cashbook/
     type: self-hosted
     tech: [nginx, python, fastapi, uvicorn, systemd]   # Phase3 실측: kuhwa:8092 uvicorn(systemd) + nginx proxy
-    observable: [nginx, fastapi-error-body, tailwind-cdn]  # /cashbook/login 이 https://cdn.tailwindcss.com 로드 — 외부 3자 의존(가용성·프라이버시 주의)
+    observable: [nginx, fastapi-error-body, tailwind-vendor, htmx-vendor]  # 외부 3자 스크립트 0 (Phase5) — static/vendor/ 자체서빙: tailwind.js 407KB·htmx.min.js 51KB, 로그인 후 페이지에서 둘 다 200. POST 405 는 여전히 유효(/cashbook/ 등)
     # 구(舊) 오리진: https://mini-cashbook.vercel.app/ — 이관 후 접근 차단
 
   # ---- L0: 교육 도구 ----
@@ -81,7 +81,7 @@ concepts:
     path: /app/pdf/
     type: self-hosted
     tech: [fastapi, docker, uvicorn]
-    observable: [nginx, fastapi-error-body]  # HEAD 405 · {"detail":...} (devforge에서 런타임, nginx proxy)
+    observable: [nginx, fastapi-error-body]  # POST 405 · {"detail":...} — HEAD 는 303. 런타임은 kuhwa docker 컨테이너(:8000, compose 없이 docker run) + nginx proxy (Phase5 실측에서 'devforge 런타임' 표기 정정)
 
   - id: edufinebot
     label: 품목내역 생성기
