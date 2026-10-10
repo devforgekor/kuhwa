@@ -1,15 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div class="kb-head">
+  <h1>현금출납부</h1>
+  <p class="lead">예산 내역 — 입금·출금·결산을 한 표에서 바로 수정합니다</p>
+</div>
+
+{# htmx 는 #cashbook-root 내부만 갈아끼운다(위 page-head 는 그 바깥) #}
 <div id="cashbook-root">
-  <table class="cashbook-table w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden text-sm">
+  <table class="cashbook-table w-full border-collapse bg-white text-sm">
     <thead>
       <tr class="bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-        <th colspan="3" class="border px-3 py-2 text-center bg-blue-50">입금</th>
-        <th colspan="3" class="border px-3 py-2 text-center bg-red-50">출금</th>
-        <th colspan="3" class="border px-3 py-2 text-center bg-green-50">결산</th>
+        <th colspan="3" class="border px-3 py-2 text-center bg-gray-100">입금</th>
+        <th colspan="3" class="border px-3 py-2 text-center bg-gray-100">출금</th>
+        <th colspan="3" class="border px-3 py-2 text-center bg-gray-100">결산</th>
       </tr>
-      <tr class="bg-gray-50 text-xs text-gray-500">
+      <tr class="bg-gray-100 text-xs text-gray-500">
         <th class="border px-3 py-1 w-28">일자</th>
         <th class="border px-3 py-1 w-28">금액</th>
         <th class="border px-3 py-1">비고</th>
@@ -73,9 +79,9 @@
 
         {# ── 결산 ── #}
         {% if loop.first %}
-          <td class="border px-3 py-2 text-right text-green-700 font-semibold bg-green-50/50">₩{{ "{:,}".format(total_deposit) }}</td>
-          <td class="border px-3 py-2 text-right text-red-700 font-semibold bg-green-50/50">₩{{ "{:,}".format(total_withdrawal) }}</td>
-          <td class="border px-3 py-2 text-right font-bold bg-green-50/50 {% if balance >= 0 %}text-green-700{% else %}text-red-700{% endif %}">₩{{ "{:,}".format(balance) }}</td>
+          <td class="border px-3 py-2 text-right text-green-700 font-semibold bg-gray-50">₩{{ "{:,}".format(total_deposit) }}</td>
+          <td class="border px-3 py-2 text-right text-red-700 font-semibold bg-gray-50">₩{{ "{:,}".format(total_withdrawal) }}</td>
+          <td class="border px-3 py-2 text-right font-bold bg-gray-50 {% if balance >= 0 %}text-green-700{% else %}text-red-700{% endif %}">₩{{ "{:,}".format(balance) }}</td>
         {% else %}
           <td class="border"></td>
           <td class="border"></td>
@@ -91,7 +97,7 @@
       {% endif %}
 
       {# ── 입금 추가 ── #}
-      <tr class="bg-blue-50/30">
+      <tr class="bg-gray-50">
         <td class="border" colspan="3">
           <form hx-post="/deposit" hx-target="#cashbook-root" hx-swap="innerHTML"
                 hx-on::after-request="this.reset()" class="flex">
