@@ -157,6 +157,10 @@ server {
 
 	location /app/pdf/ {
 		proxy_pass http://127.0.0.1:8000/;
+		# 캐시 재검증 강화: Cache-Control 이 없어 구 스타일시트가
+		# 휴리스틱 캐시에 남았었다(헤더 부재 = 원인). expires 는
+		# add_header 상속을 끊지 않는다.
+		expires -1;
 		proxy_http_version 1.1;
 		proxy_set_header Host              $host;
 		proxy_set_header X-Real-IP         $remote_addr;
