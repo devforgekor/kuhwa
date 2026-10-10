@@ -24,3 +24,5 @@ node apps/portal/build.mjs
 
 `portal-build.yml` — `apps/portal/**` push 시 자동 빌드→rsync `/var/www/kuhwa/`.
 시크릿: `KUHWA_SSH_KEY`(배포 전용 키), `KUHWA_DEPLOY_USER`.
+
+<!-- ci smoke: push paths trigger -->
