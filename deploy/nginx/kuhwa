@@ -5,6 +5,7 @@
 #         /schedule/              → 정적 학사일정 (var/www/schedule + 정적 calendar.ics)
 #         /timetable/ · /cashbook/ → 자체호스팅 uvicorn (8091 / 8092, systemd)
 #         /edufinebot/            → /app/edufinebot/ 로 301 (트레일링 슬래시)
+#         (Phase4) 이관4경로 응답에 분류 breadcrumb + 관련 서비스 fixed 막대 sub_filter 주입
 #         /ebook/ /viewer/ /resource/ /_share/ /pdf/ → 신규 경로로 301 (북마크 보호)
 #
 # 전자교과서 캐시: /data/cache/app/etextbook/ (URL 미러)
@@ -191,6 +192,8 @@ server {
 	location /app/edufinebot/ {
 		alias /var/www/edufinebot/;
 		index index.html;
+		sub_filter '</body>' '<style>.kx{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 12px;background:#f6f8fa;border-top:1px solid #d1d9e0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:#57606a;box-sizing:border-box}.kx a{color:#0969da;text-decoration:none}.kx a:hover{text-decoration:underline}.kx .c{color:#1f2328;font-weight:600}.kx .p{color:#656d76}.kx .s{color:#8c959f}.kx .r{margin-left:auto;color:#57606a}body{padding-bottom:44px}@media (max-width:640px){.kx .r{margin-left:0}}</style><nav class="kx" aria-label="분류 경로"><a href="/">kuhwa</a><span class="s">›</span><span class="p">교육 도구</span><span class="s">›</span><span class="c">품목내역 생성기</span></nav></body>';
+		sub_filter_once on;                # public/index.html 실측 </body> 1회
 	}
 
 	# ============================================================
@@ -211,6 +214,9 @@ server {
 		root /var/www;                 # → /var/www/schedule/...
 		index index.html;
 		try_files $uri $uri/ =404;
+		sub_filter '</body>' '<style>.kx{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 12px;background:#f6f8fa;border-top:1px solid #d1d9e0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:#57606a;box-sizing:border-box}.kx a{color:#0969da;text-decoration:none}.kx a:hover{text-decoration:underline}.kx .c{color:#1f2328;font-weight:600}.kx .p{color:#656d76}.kx .s{color:#8c959f}.kx .r{margin-left:auto;color:#57606a}body{padding-bottom:44px}@media (max-width:640px){.kx .r{margin-left:0}}</style><nav class="kx" aria-label="분류 경로"><a href="/">kuhwa</a><span class="s">›</span><span class="p">나이스</span><span class="s">›</span><span class="c">학사일정</span><span class="r">관련: <a href="/timetable/">교사 시간표</a> · <a href="/app/etextbook/">전자교과서 뷰어</a></span></nav></body>';
+		sub_filter_once on;                # public/index.html 실측 </body> 1회
+		# data/*.json 은 application/json → sub_filter 대상(text/html) 아님
 	}
 
 	# 정적 .ics (fetch-schedule.js 가 선생성, 2026-10-10 사용자 결정)
@@ -238,6 +244,7 @@ server {
 		proxy_redirect ~^/(.*)$ /timetable/$1;    # 상대 Location 재접두
 		sub_filter 'href="/'   'href="/timetable/';
 		sub_filter 'action="/' 'action="/timetable/';
+		sub_filter '</body>' '<style>.kx{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 12px;background:#f6f8fa;border-top:1px solid #d1d9e0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:#57606a;box-sizing:border-box}.kx a{color:#0969da;text-decoration:none}.kx a:hover{text-decoration:underline}.kx .c{color:#1f2328;font-weight:600}.kx .p{color:#656d76}.kx .s{color:#8c959f}.kx .r{margin-left:auto;color:#57606a}body{padding-bottom:44px}@media (max-width:640px){.kx .r{margin-left:0}}</style><nav class="kx" aria-label="분류 경로"><a href="/">kuhwa</a><span class="s">›</span><span class="p">나이스</span><span class="s">›</span><span class="c">교사 시간표</span><span class="r">관련: <a href="/schedule/">학사일정</a></span></nav></body>';
 		sub_filter_once off;                      # 기본 on → 모든 occurrence 를 바꾸려면 off
 		# sub_filter_types 는 지정하지 않는다 — 기본 text/html, 명시하면 duplicate MIME warn
 	}
@@ -258,6 +265,7 @@ server {
 		sub_filter 'hx-put="/'    'hx-put="/cashbook/';
 		sub_filter 'hx-post="/'   'hx-post="/cashbook/';
 		sub_filter 'hx-delete="/' 'hx-delete="/cashbook/';
+		sub_filter '</body>' '<style>.kx{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 12px;background:#f6f8fa;border-top:1px solid #d1d9e0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;color:#57606a;box-sizing:border-box}.kx a{color:#0969da;text-decoration:none}.kx a:hover{text-decoration:underline}.kx .c{color:#1f2328;font-weight:600}.kx .p{color:#656d76}.kx .s{color:#8c959f}.kx .r{margin-left:auto;color:#57606a}body{padding-bottom:44px}@media (max-width:640px){.kx .r{margin-left:0}}</style><nav class="kx" aria-label="분류 경로"><a href="/">kuhwa</a><span class="s">›</span><span class="p">나이스</span><span class="s">›</span><span class="c">예산 내역</span></nav></body>';
 		sub_filter_once off;
 	}
 
