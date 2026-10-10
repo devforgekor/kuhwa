@@ -29,6 +29,6 @@ jobs:
           mkdir -p ~/.ssh
           printf 'Host kuhwa\n  HostName 161.33.199.207\n  User %s\n  StrictHostKeyChecking no\n' "${{ secrets.KUHWA_DEPLOY_USER }}" > ~/.ssh/config
           echo "${{ secrets.KUHWA_SSH_KEY }}" > key && chmod 600 key
-          rsync -avz --delete -e "ssh -i key -o StrictHostKeyChecking=no" \
+          rsync -avz --delete --no-owner --no-group -e "ssh -i key -o StrictHostKeyChecking=no" \
             apps/portal/dist/ kuhwa:/var/www/kuhwa/
           rm -f key
