@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>품목내역 생성기</title>
+<link rel="icon" href="data:,">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f4f6f8; color: #1f2933;
+    font-family: "Pretendard", "맑은 고딕", "Malgun Gothic", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  header {
+    background: #1f2933; color: #fff; padding: 14px 20px;
+  }
+  header h1 { margin: 0; font-size: 18px; display: inline-block; }
+  header small { margin-left: 10px; color: #9aa5b1; font-weight: normal; }
+  main { max-width: 1100px; margin: 20px auto; padding: 0 16px 40px; }
+  .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .inputs { grid-template-columns: 1fr; } }
+  .pane {
+    background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; padding: 12px;
+  }
+  .pane label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .pane textarea {
+    width: 100%; height: 260px; resize: vertical; padding: 8px;
+    border: 1px solid #bcccdc; border-radius: 6px;
+    font-family: Consolas, "Courier New", monospace; font-size: 12.5px;
+    background: #fbfdff;
+  }
+  .pane textarea:focus { outline: 2px solid #2f80ed; outline-offset: -1px; }
+  .btns { margin-top: 8px; display: flex; gap: 8px; }
+  button {
+    padding: 7px 14px; border: 1px solid #9fb3c8; border-radius: 6px;
+    background: #fff; color: #243b53; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: #eef2f6; }
+  .status {
+    margin-top: 14px; padding: 11px 14px; border-radius: 8px;
+    font-weight: 700; border: 1px solid transparent;
+  }
+  .status.ok   { background: #e3f9e5; color: #0b6b2e; border-color: #8fd6a0; }
+  .status.warn { background: #fff3e0; color: #8a5300; border-color: #f5c26b; }
+  .status.err  { background: #fde8e8; color: #a02020; border-color: #f1a3a3; }
+  .status.info { background: #e8f1fd; color: #1b4f9c; border-color: #a9c6f0; }
+  .result {
+    margin-top: 14px; background: #fff; border: 1px solid #d9e2ec;
+    border-radius: 8px; padding: 14px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    border: 1.5px solid #7b8a99; padding: 7px 8px; text-align: center;
+    vertical-align: middle; word-break: break-all;
+  }
+  th { background: #d9d9d9; font-weight: 700; }
+  td.left { text-align: left; }
+  tfoot td { background: #f3f3f3; font-weight: 700; }
+  .meta { margin-top: 8px; color: #627d98; font-size: 13px; }
+  .dl { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
+  .dl button {
+    background: #2f80ed; border-color: #2f80ed; color: #fff;
+    font-weight: 700; padding: 9px 22px;
+  }
+  .dl button:hover:not(:disabled) { background: #1b64c4; }
+  .dl button:disabled { background: #cbd5e1; border-color: #cbd5e1; color: #8795a1; cursor: not-allowed; }
+  .hint { color: #8795a1; font-size: 13px; }
+  footer { margin-top: 22px; color: #829ab1; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>품목내역 생성기</h1>
+  <small>쿠팡 장바구니 ∩ 주문/결제 교집합 → 엑셀</small>
+</header>
+<main>
+  <section class="inputs">
+    <div class="pane">
+      <label for="cart">① 장바구니 페이지 텍스트</label>
+      <textarea id="cart" placeholder="장바구니 페이지에서 Ctrl+A, Ctrl+C 로 전체 복사 후 여기에 붙여넣기" spellcheck="false"></textarea>
+      <div class="btns">
+        <button id="pasteCart" type="button">붙여넣기</button>
+        <button id="clearCart" type="button">지우기</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label for="pay">② 주문/결제 페이지 텍스트</label>
+      <textarea id="pay" placeholder="주문/결제 완료 화면에서 Ctrl+A, Ctrl+C 로 전체 복사 후 여기에 붙여넣기" spellcheck="false"></textarea>
+      <div class="btns">
+        <button id="pastePay" type="button">붙여넣기</button>
+        <button id="clearPay" type="button">지우기</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="status" class="status" hidden></div>
+
+  <section id="result" class="result" hidden>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:6%">순번</th>
+          <th style="width:38%">* 내용</th>
+          <th style="width:20%">규격</th>
+          <th style="width:7%">수량</th>
+          <th style="width:6%">단위</th>
+          <th style="width:11%">예상단가</th>
+          <th style="width:12%">* 예상금액</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+      <tfoot>
+        <tr>
+          <td></td>
+          <td class="left">합계</td>
+          <td></td>
+          <td id="qtySum"></td>
+          <td></td>
+          <td></td>
+          <td id="amtSum"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="meta" id="meta"></div>
+    <div class="dl">
+      <button id="download" type="button" disabled>Excel 다운로드</button>
+      <span class="hint" id="hint"></span>
+    </div>
+  </section>
+
+  <footer>입력 텍스트는 서버로 전송되지 않으며 브라우저에서만 처리됩니다.</footer>
+</main>
+<script src="vendor/exceljs.min.js"></script>
+<script src="parser.js"></script>
+<script src="excel.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+name: App deploy (schedule · edufinebot · nginx · systemd)
+
+# 계획서 6장 Phase3 — 자체호스팅 이관 배포
+#   apps/schedule/public/ → /var/www/schedule/   (정적 학사일정 + 정적 calendar.ics)
+#   apps/edufinebot/      → /var/www/edufinebot/  (품목내역 생성기)
+#   deploy/nginx/kuhwa    → sites-available (nginx -t 실패 시 자동 롤백)
+#   deploy/systemd/*.service → /etc/systemd/system (변경 시에만 재시작)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/schedule/public/**"
+      - "apps/edufinebot/**"
+      - "deploy/nginx/**"
+      - "deploy/systemd/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: app-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH 설정
+        run: |
+          mkdir -p ~/.ssh
+          printf 'Host kuhwa\n  HostName 161.33.199.207\n  User %s\n  StrictHostKeyChecking no\n' "${{ secrets.KUHWA_DEPLOY_USER }}" > ~/.ssh/config
+          echo "${{ secrets.KUHWA_SSH_KEY }}" > ~/.ssh/key && chmod 600 ~/.ssh/key
+
+      - name: 정적 앱 rsync
+        run: |
+          # -a 금지: 소유자·권한·시간 보존은 root 소유 대상에서 chgrp/chmod/utime EPERM(exit 23)
+          rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
+            apps/schedule/public/ kuhwa:/var/www/schedule/
+          rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
+            apps/edufinebot/ kuhwa:/var/www/edufinebot/
+
+      - name: nginx · systemd 반영 (nginx -t 실패 시 롤백)
+        run: |
+          scp -i ~/.ssh/key deploy/nginx/kuhwa kuhwa:/tmp/kuhwa.nginx
+          scp -i ~/.ssh/key deploy/systemd/*.service kuhwa:/tmp/
+          ssh -i ~/.ssh/key kuhwa 'bash -s' <<'REMOTE'
+          set -euo pipefail
+
+          echo "== systemd =="
+          CHANGED=0
+          for u in /tmp/kuhwa-*.service; do
+            [ -e "$u" ] || continue
+            dst="/etc/systemd/system/$(basename "$u")"
+            if ! sudo -n cmp -s "$u" "$dst"; then
+              sudo -n cp "$u" "$dst"
+              CHANGED=1
+              echo "updated $(basename "$u")"
+            fi
+            rm -f "$u"
+          done
+          if [ "$CHANGED" = 1 ]; then
+            sudo -n systemctl daemon-reload
+            sudo -n systemctl restart kuhwa-timetable.service kuhwa-cashbook.service
+            echo "systemd 재시작 완료"
+          else
+            echo "systemd 유닛 변경 없음"
+          fi
+
+          echo "== nginx =="
+          if sudo -n cmp -s /tmp/kuhwa.nginx /etc/nginx/sites-available/kuhwa; then
+            echo "nginx 설정 변경 없음"
+            rm -f /tmp/kuhwa.nginx
+            exit 0
+          fi
+          sudo -n cp /etc/nginx/sites-available/kuhwa /etc/nginx/sites-available/kuhwa.ci-prev
+          sudo -n cp /tmp/kuhwa.nginx /etc/nginx/sites-available/kuhwa
+          rm -f /tmp/kuhwa.nginx
+          if sudo -n nginx -t; then
+            sudo -n systemctl reload nginx
+            sudo -n rm -f /etc/nginx/sites-available/kuhwa.ci-prev
+            echo "nginx reload 완료"
+          else
+            sudo -n mv /etc/nginx/sites-available/kuhwa.ci-prev /etc/nginx/sites-available/kuhwa
+            echo "::error::nginx -t 실패 — 이전 설정으로 롤백"
+            exit 1
+          fi
+          REMOTE
+
+      - name: 정리
+        if: always()
+        run: rm -f ~/.ssh/key
+
+      - name: 게이트 확인
+        run: |
+          for p in /schedule/ /timetable/ /cashbook/ /edufinebot/; do
+            code=$(curl -sL -o /dev/null -w "%{http_code}" "https://kuhwa.duckdns.org$p")
+            echo "$p = $code"
+            [ "$code" = "200" ] || { echo "::error::$p 비정상 ($code)"; exit 1; }
+          done
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://kuhwa.duckdns.org/schedule/data/calendar.ics")
+          echo "/schedule/data/calendar.ics = $code"
+          [ "$code" = "200" ] || { echo "::error::ICS 미배포"; exit 1; }
