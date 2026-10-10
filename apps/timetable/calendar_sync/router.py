@@ -117,7 +117,7 @@ def clear_session(request: Request, response: RedirectResponse):
 
 
 # Routes
-@router.get("/auth/google/login", response_class=HTMLResponse)
+@router.api_route("/auth/google/login", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def google_login(request: Request, sheets: bool = False):
     """Initiate Google OAuth flow."""
     oauth = get_oauth_service(request, include_sheets=sheets)
@@ -131,7 +131,7 @@ async def google_login(request: Request, sheets: bool = False):
     return response
 
 
-@router.get("/auth/google/callback")
+@router.api_route("/auth/google/callback", methods=["GET","HEAD"])
 async def google_callback(request: Request, code: str = None, state: str = None, error: str = None):
     """Handle Google OAuth callback."""
     session = get_session(request)
@@ -174,7 +174,7 @@ async def google_callback(request: Request, code: str = None, state: str = None,
     return response
 
 
-@router.get("/login", response_class=HTMLResponse)
+@router.api_route("/login", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def login_page(request: Request, error: str = None):
     """Show login page."""
     return templates.TemplateResponse(
@@ -184,7 +184,7 @@ async def login_page(request: Request, error: str = None):
     )
 
 
-@router.get("/upload", response_class=HTMLResponse)
+@router.api_route("/upload", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def upload_page(request: Request):
     """Show upload page (requires login)."""
     session = get_session(request)
@@ -291,7 +291,7 @@ async def upload_sheets(
     return _sync_response(request, result)
 
 
-@router.get("/status", response_class=HTMLResponse)
+@router.api_route("/status", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def status_page(request: Request):
     """Show sync status page."""
     session = get_session(request)
@@ -308,7 +308,7 @@ async def status_page(request: Request):
     )
 
 
-@router.get("/logout")
+@router.api_route("/logout", methods=["GET","HEAD"])
 async def logout(request: Request):
     """Logout and clear session."""
     session = get_session(request)

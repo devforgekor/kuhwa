@@ -84,7 +84,7 @@ def _get_cashbook(request: Request) -> Optional[RedirectResponse | CashBook]:
 # Auth routes
 # ---------------------------------------------------------------------------
 
-@app.get("/login", response_class=HTMLResponse)
+@app.api_route("/login", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse(request, "login.html", {"error": None})
 
@@ -98,7 +98,7 @@ async def login_submit(request: Request, password: str = Form(...)):
     return templates.TemplateResponse(request, "login.html", {"error": "비밀번호가 틀렸습니다."})
 
 
-@app.get("/logout")
+@app.api_route("/logout", methods=["GET","HEAD"])
 async def logout():
     resp = RedirectResponse("/login", status_code=302)
     auth.clear_session(resp)
@@ -109,7 +109,7 @@ async def logout():
 # Main page
 # ---------------------------------------------------------------------------
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET","HEAD"], response_class=HTMLResponse)
 async def index(request: Request):
     cb = _get_cashbook(request)
     if isinstance(cb, RedirectResponse):
@@ -251,7 +251,7 @@ def _cashbook_json(cb: CashBook) -> dict:
 # JSON API (for Vercel frontend)
 # ---------------------------------------------------------------------------
 
-@app.get("/api/cashbook")
+@app.api_route("/api/cashbook", methods=["GET","HEAD"])
 async def api_get_cashbook(request: Request, key: str = Query("")):
     if API_KEY and key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")

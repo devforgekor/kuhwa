@@ -53,13 +53,13 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET","HEAD"])
 async def root():
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/calendar/login")
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET","HEAD"])
 async def health():
     return {"status": "ok", "service": "timetable"}
 
