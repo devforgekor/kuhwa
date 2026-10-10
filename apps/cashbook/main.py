@@ -84,25 +84,18 @@ def _get_cashbook(request: Request) -> Optional[RedirectResponse | CashBook]:
 # Auth routes
 # ---------------------------------------------------------------------------
 
-@app.api_route("/login", methods=["GET","HEAD"], response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"error": None})
+@app.api_route("/login", methods=["GET", "HEAD", "POST"], response_class=HTMLResponse)
+async def login(request: Request):
+    """비밀번호 인증 제거(2026-10-10) — 남아있는 /login 을 홈으로 보낸다.
+
+    nginx 가 Location 을 /cashbook/ 로 재작성하므로(실측) 브라우저는 제자리로 돌아온다.
+    """
+    return RedirectResponse("/", status_code=302)
 
 
-@app.post("/login", response_class=HTMLResponse)
-async def login_submit(request: Request, password: str = Form(...)):
-    if auth.verify_password(password):
-        resp = RedirectResponse("/", status_code=302)
-        auth.set_session(resp)
-        return resp
-    return templates.TemplateResponse(request, "login.html", {"error": "비밀번호가 틀렸습니다."})
-
-
-@app.api_route("/logout", methods=["GET","HEAD"])
+@app.api_route("/logout", methods=["GET", "HEAD", "POST"], response_class=HTMLResponse)
 async def logout():
-    resp = RedirectResponse("/login", status_code=302)
-    auth.clear_session(resp)
-    return resp
+    return RedirectResponse("/", status_code=302)
 
 
 # ---------------------------------------------------------------------------

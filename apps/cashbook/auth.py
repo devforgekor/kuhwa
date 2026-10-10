@@ -57,7 +57,18 @@ def is_authenticated(request: Request) -> bool:
 
 
 def require_auth(request: Request) -> Optional[RedirectResponse]:
-    """Return None if authenticated, else redirect to /login."""
-    if not request.cookies.get(COOKIE_NAME):
-        return RedirectResponse("/login", status_code=302)
+    """인증 게이트 — 현재 열림 상태(2026-10-10).
+
+    사용자 요청으로 비밀번호 인증을 제거했고, 이 함수는 항상 None 을 반환해
+    인증을 건너뛴다. main.py 는 여전히 이 함수를 호출하므로, 추후 Google OAuth
+    를 도입할 때는 게이트를 다시 넣으려면 이 함수 안만 고치면 된다.
+
+    기존 로직(쿠키 존재 검사)은 아래와 같다 — 되돌릴 때 반드시 함께 복원할 것:
+        if not request.cookies.get(COOKIE_NAME):
+            return RedirectResponse("/login", status_code=302)
+
+    ※ 되돌리기 = 이 커밋을 git revert. main.py 의 /login 라우트와
+      templates/login.html 을 함께 복원해야 한다. 두쪽이 어긋나면
+      / → /login → / 무한 리다이렉트가 발생한다.
+    """
     return None
