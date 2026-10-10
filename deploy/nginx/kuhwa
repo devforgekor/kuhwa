@@ -40,6 +40,10 @@ server {
 	ssl_certificate_key /etc/letsencrypt/live/kuhwa.duckdns.org/privkey.pem;
 
 	client_max_body_size 64m;
+	# [WHY] zone=general 은 $binary_remote_addr 단위 leaky bucket — 서버 안에서 실행하는
+	# 게이트/스모크 도 이 서버 공인 IP 한 개의 버킷을 쓴다. 게이트 3종 연속(~80요청)이면
+	# burst=40 이 바닥나 429 로 간헐 실패한다. 게이트에는 429 지수 백오프 필수
+	# (2026-10-11 실측 3/3 ALL PASS, 사용자 영향 0 — 핸드오버 §7 "금지·주의").
 	limit_req zone=general burst=40 nodelay;
 	limit_conn addr 20;
 	include /etc/nginx/snippets/security-headers.conf;
