@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 const nodemailer = require("nodemailer");
+const { buildIcs } = require("./build-ics");
 
 const ATPT_OFCDC_SC_CODE = "B10"; // 서울특별시교육청
 const SD_SCHUL_CODE = "7010473"; // 한국구화학교
@@ -145,6 +146,36 @@ async function main() {
       console.log(`unchanged ${outPath} (${events.length} events)`);
     }
   });
+
+  // 정적 .ics 선생성 (사용자 결정 2026-10-10): 3개년 이벤트를 하나의 캘린더로 합친다.
+  // DTSTAMP 는 정적 JSON 의 updatedAt 중 최신값을 써서 — 이벤트가 안 바뀌면 .ics 도 안 바뀐다(불필요 커밋 방지).
+  const stampIso =
+    years
+      .map((y) => {
+        try {
+          return JSON.parse(fs.readFileSync(path.join(outDir, `${y}.json`), "utf-8")).updatedAt;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort()
+      .pop() || new Date().toISOString();
+
+  const allEvents = results.flat().sort((a, b) => a.date.localeCompare(b.date));
+  const icsPath = path.join(outDir, "calendar.ics");
+  const icsBody = buildIcs(allEvents, stampIso);
+  let icsChanged = true;
+  try {
+    icsChanged = fs.readFileSync(icsPath, "utf-8") !== icsBody;
+  } catch {}
+  if (icsChanged) {
+    fs.writeFileSync(icsPath, icsBody);
+    console.log(`wrote ${icsPath} (${allEvents.length} events)`);
+    hasChanges = true;
+  } else {
+    console.log(`unchanged ${icsPath} (${allEvents.length} events)`);
+  }
 
   // 이벤트 데이터 변경 없으면 종료
   if (!hasChanges) {

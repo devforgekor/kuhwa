@@ -202,7 +202,7 @@
     const yearLabelEl = document.getElementById("schoolYearLabel");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
-    const icsUrl = window.location.origin + "/api/calendar.ics";
+    const icsUrl = new URL("data/calendar.ics", window.location.href).href;
     const webcalUrl = icsUrl.replace(/^https?:\/\//, "webcal://");
     const gcalUrl = "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent(webcalUrl);
 
@@ -229,7 +229,7 @@
       // (실시간 NEIS API 호출이 없어 훨씬 빠르게 로딩됩니다.)
       let events = [];
       try {
-        const res = await fetch(`/data/${year}.json`);
+        const res = await fetch(`data/${year}.json`);
         if (res.ok) {
           const data = await res.json();
           events = data.events || [];
