@@ -6,61 +6,97 @@
 <title>kuhwa 서비스</title>
 <meta name="description" content="kuhwa 모노레포 서비스 모음" />
 <style>
-  :root { --primary:#1d4ed8; --bg:#f8fafc; --card:#fff; --border:#e2e8f0;
-          --text:#1e293b; --muted:#64748b; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:"Pretendard",-apple-system,BlinkMacSystemFont,
-         "Apple SD Gothic Neo","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-  header { background:var(--primary); color:#fff; padding:36px 20px 30px; text-align:center; }
-  header h1 { margin:0 0 6px; font-size:26px; letter-spacing:-.02em; }
-  header p { margin:0; opacity:.85; font-size:14px; }
-  .breadcrumb { margin:12px 0 0; font-size:12.5px; opacity:.9; }
-  .breadcrumb a { color:#fff; text-decoration:none; }
-  .breadcrumb a:hover { text-decoration:underline; }
-  .breadcrumb .sep { margin:0 6px; opacity:.6; }
-  .layout { max-width:1100px; margin:0 auto; padding:28px 16px 56px;
-            display:flex; gap:28px; align-items:flex-start; }
-  nav.tree { flex:0 0 200px; background:var(--card); border:1px solid var(--border);
-             border-radius:12px; padding:14px 16px; font-size:13px; }
-  nav.tree .tree-l0 { display:block; margin:10px 0 4px; font-weight:600; color:var(--text); }
-  nav.tree ul { list-style:none; margin:0; padding:0; }
-  nav.tree ul ul { padding-left:12px; }
-  nav.tree ul ul li { margin:3px 0; }
-  nav.tree a { color:var(--muted); text-decoration:none; }
-  nav.tree a:hover { color:var(--primary); }
-  nav.tree .tree-internal { color:var(--muted); opacity:.7; }
+  :root {
+    --bg: #ffffff; --bg-subtle: #f6f8fa;
+    --border: #d1d9e0;
+    --fg: #1f2328; --fg-muted: #656d76;
+    --accent: #0969da;
+    --success: #1a7f37; --attention: #9a6700;
+    --font-body: -apple-system, "Segoe UI", "Pretendard", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:var(--font-body); background:var(--bg); color:var(--fg);
+         font-size:14px; line-height:1.5; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  /* 48px 헤더 — 얇은 보더 (금지: 파란 단색 헤더) */
+  header { height:48px; display:flex; align-items:center; gap:16px; padding:0 24px;
+           border-bottom:1px solid var(--border); background:var(--bg); }
+  header .logo { font-weight:600; font-size:16px; color:var(--fg); }
+  header .logo:hover { text-decoration:none; }
+  header input#search { flex:0 1 320px; height:28px; padding:0 10px; font-size:13px;
+           border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--fg); }
+  header input#search:focus { outline:none; border-color:var(--accent);
+           box-shadow:0 0 0 3px rgba(9,105,218,.25); }
+  header .spacer { flex:1; }
+  header .gh { font-size:13px; color:var(--fg-muted); }
+  header .gh:hover { color:var(--accent); text-decoration:none; }
+
+  .layout { display:flex; gap:24px; max-width:1012px; margin:0 auto; padding:24px; align-items:flex-start; }
+
+  /* 좌측 분류 트리 */
+  nav.tree { flex:0 0 220px; font-size:13px; }
+  nav.tree .tree-l0 { display:block; font-weight:600; color:var(--fg); margin:14px 0 4px; }
+  nav.tree .tree-l0:first-child { margin-top:0; }
+  nav.tree ul { list-style:none; margin:0; padding:0 0 0 8px; }
+  nav.tree li { margin:2px 0; }
+  nav.tree a { color:var(--fg-muted); }
+  nav.tree a:hover { color:var(--accent); text-decoration:none; }
+  nav.tree .tree-internal { color:var(--fg-muted); opacity:.65; }
+
   main { flex:1; min-width:0; }
-  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
-  a.card { display:block; background:var(--card); border:1px solid var(--border);
-           border-radius:12px; padding:18px; text-decoration:none; color:inherit;
-           transition:border-color .15s; }
-  a.card:hover { border-color:var(--primary); }
-  div.card.internal { display:block; background:var(--card); border:1px dashed var(--border);
-           border-radius:12px; padding:18px; color:var(--muted); }
-  .card h2 { margin:0 0 6px; font-size:17px; color:var(--primary); }
-  div.card.internal h2 { color:var(--muted); }
-  .card p { margin:0; font-size:13.5px; color:var(--muted); line-height:1.55; }
-  .card .tag { display:inline-block; margin-top:10px; font-size:11.5px; color:var(--muted);
-               border:1px solid var(--border); border-radius:999px; padding:2px 9px; }
-  footer { max-width:1100px; margin:0 auto; padding:0 16px 40px; font-size:12.5px; color:var(--muted); }
-  footer a { color:var(--muted); }
-  @media (max-width:720px) { .layout { flex-direction:column; } nav.tree { flex:auto; width:100%; } }
+  .breadcrumb { font-size:12px; color:var(--fg-muted); margin:0 0 10px; }
+  .breadcrumb .sep { margin:0 4px; opacity:.6; }
+
+  /* 행형 목록 — hover는 보더만 accent (금지: translateY) */
+  .list { display:flex; flex-direction:column; gap:8px; }
+  .row { display:grid; grid-template-columns:minmax(0,2fr) auto minmax(0,1.7fr) minmax(0,1.5fr);
+         gap:12px; align-items:center; padding:10px 14px;
+         border:1px solid var(--border); border-radius:6px; color:var(--fg); }
+  a.row:hover { border-color:var(--accent); text-decoration:none; }
+  .row .row-label { font-weight:600; font-size:14px; }
+  .row .row-type { font-size:12px; color:var(--fg-muted); border:1px solid var(--border);
+                   border-radius:6px; padding:1px 8px; white-space:nowrap; justify-self:start; }
+  .row .row-path, .row .row-tech { font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);
+                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row.internal { border-style:dashed; }
+  .row.internal .row-label { color:var(--fg-muted); font-weight:500; }
+
+  footer { max-width:1012px; margin:0 auto; padding:8px 24px 40px; font-size:12px; color:var(--fg-muted); }
+
+  @media (max-width:768px) {
+    .layout { flex-direction:column; }
+    nav.tree { flex:auto; width:100%; }
+    .row { grid-template-columns:1fr auto; }
+    .row .row-path, .row .row-tech { grid-column:1/-1; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>kuhwa</h1>
-  <p>모노레포 서비스 모음</p>
-  <nav class="breadcrumb" aria-label="breadcrumb"><!--BREADCRUMB--></nav>
+  <a class="logo" href="/">kuhwa</a>
+  <input id="search" type="search" placeholder="서비스 검색" aria-label="서비스 검색" />
+  <span class="spacer"></span>
+  <a class="gh" href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
 </header>
 <div class="layout">
   <nav class="tree" aria-label="분류 트리"><!--TREE--></nav>
   <main>
-    <div class="grid"><!--ROWS--></div>
+    <p class="breadcrumb"><!--BREADCRUMB--></p>
+    <div class="list"><!--ROWS--></div>
   </main>
 </div>
-<footer>
-  © kuhwa · <a href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
-</footer>
+<footer>© kuhwa · taxonomy v2 (concepts.yml 단일 소스)</footer>
+<script>
+  // 점진 강화: JS 없어도 전 행 정적 렌더(G2). 스크립트는 검색 필터에만 관여.
+  document.getElementById("search").addEventListener("input", function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll(".list .row").forEach(function (r) {
+      r.style.display = !q || r.textContent.toLowerCase().indexOf(q) >= 0 ? "" : "none";
+    });
+  });
+</script>
 </body>
 </html>

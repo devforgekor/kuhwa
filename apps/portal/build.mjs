@@ -163,6 +163,7 @@ for (const id of ids) {
   seen.add(id);
 }
 const byId = new Map(concepts.map((c) => [c.id, c]));
+const typeLabels = new Map(types.map((t) => [t.id, t.label]));
 const roots = concepts.filter((c) => !c.broader); // L0
 const reachable = new Set();
 const queue = roots.map((c) => c.id);
@@ -287,7 +288,7 @@ const treeHtml = roots.map((l0) => {
   return `<span class="tree-l0">${esc(l0.label)}</span>\n      <ul>\n      ${items}\n      </ul>`;
 }).join("\n      ");
 
-// ROWS: 리프 카드 (data-testid="portal-row" — 규칙7 검증 대상)
+// ROWS: 행형 목록 (data-testid="portal-row" — 규칙7/G2 검증 대상)
 const rowsHtml = orderedLeaves.map((c) => {
   const attrs = [
     `data-testid="portal-row"`,
@@ -297,20 +298,24 @@ const rowsHtml = orderedLeaves.map((c) => {
     c.url ? `data-url="${esc(c.url)}"` : "",
     c.tech ? `data-tech="${esc(c.tech.join(","))}"` : "",
   ].filter(Boolean).join(" ");
+  const typeLabel = c.type ? typeLabels.get(c.type) || c.type : "";
   if (c.internal) {
-    return `<div class="card internal" ${attrs}>
-      <h2>${esc(c.label)}</h2>
-      <p>${esc(c.description || "")}</p>
-      <span class="tag">내부 문서</span>
+    return `<div class="row internal" ${attrs}>
+      <span class="row-label">${esc(c.label)}</span>
+      <span class="row-type">${esc(typeLabel)}</span>
+      <span class="row-path">내부 참조</span>
+      <span class="row-tech"></span>
     </div>`;
   }
   const href = c.path || c.url;
-  const tag = c.path || new URL(c.url).hostname;
+  const pathCol = c.path || new URL(c.url).hostname;
+  const techCol = (c.tech || []).join(" ");
   const ext = c.url ? ` target="_blank" rel="noopener"` : "";
-  return `<a class="card" ${attrs} href="${esc(href)}"${ext}>
-      <h2>${esc(c.label)}</h2>
-      <p>${esc(c.description || "")}</p>
-      <span class="tag">${esc(tag)}</span>
+  return `<a class="row" ${attrs} href="${esc(href)}"${ext}>
+      <span class="row-label">${esc(c.label)}</span>
+      <span class="row-type">${esc(typeLabel)}</span>
+      <span class="row-path">${esc(pathCol)}</span>
+      <span class="row-tech">${esc(techCol)}</span>
     </a>`;
 }).join("\n    ");
 
