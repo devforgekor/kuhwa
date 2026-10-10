@@ -29,6 +29,8 @@ jobs:
           mkdir -p ~/.ssh
           printf 'Host kuhwa\n  HostName 161.33.199.207\n  User %s\n  StrictHostKeyChecking no\n' "${{ secrets.KUHWA_DEPLOY_USER }}" > ~/.ssh/config
           echo "${{ secrets.KUHWA_SSH_KEY }}" > key && chmod 600 key
-          rsync -avz --delete --no-owner --no-group -e "ssh -i key -o StrictHostKeyChecking=no" \
-            apps/portal/dist/ kuhwa:/var/www/kuhwa/
+          # -a 금지: 대상 루트(/var/www/kuhwa)는 root 소유 → chgrp/chmod/utime 전부 EPERM(exit 23).
+          # CI 배포는 소유자·권한·시간 보존 불필요 → 속성 off, 신규 파일은 setgid dir로 www-data 상속.
+          rsync -rlz --delete --no-owner --no-group --no-perms --no-times \
+            -e "ssh -i key -o StrictHostKeyChecking=no" apps/portal/dist/ kuhwa:/var/www/kuhwa/
           rm -f key
