@@ -1,0 +1,20 @@
+# opencode2 이그레스 분리 — WARP sidecar (devforge container-warp-proxy.container 의 docker compose 이식)
+# 실행: docker compose -f /opt/kuhwa/deploy/containers/opencode/warp-proxy.compose.yml up -d
+# [WHY] 127.0.0.1 고정 게이트 — 외부에 열면 API 키 없이도 우리 대역폭을 쓰는 open proxy 가 된다.
+#   consumer 는 containers/opencode/run.sh. ufw 는 루프백 바인드라 무변경.
+# [WHY] HealthCmd 없음 — sidecar 는 restart 정책 self-heal 로 충분 (devforge 실측 계승).
+name: opencode2
+
+services:
+  warp-proxy:
+    image: docker.io/seiry/cloudflare-warp-proxy:latest
+    container_name: warp-proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:40000:40000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

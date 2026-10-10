@@ -1,0 +1,24 @@
+FROM localhost/opencode-ol9:latest
+
+USER root
+
+# [WHY] remap 빌드 환경의 chown 은 디스크에 101001 로 떨어진다(uid 1001 이 사용 불가).
+#   → 오너십 대신 mode 로 해결하고, 실제 데이터 seed 는 host 디렉터리(1001 소유)가
+#   bind 로 담당한다. 실행 전 게이트 G0 에서 소유권 실측 검증한다.
+# [WHY] base 이미지 HOME=/home/opc 은 kuhwa 컨테이너에서 미사용 — 전면 재정의.
+ENV HOME=/home/ubuntu \
+    OPENCODE_TUI_CONFIG=/home/ubuntu/.local/state/opencode/tui.json \
+    UV_TOOL_DIR=/home/ubuntu/.cache/uv/tools \
+    UV_TOOL_BIN_DIR=/home/ubuntu/.cache/uv/bin \
+    UV_PYTHON_INSTALL_DIR=/home/ubuntu/.cache/uv/python
+
+# [WHY] host .gitconfig 는 credential.helper(git-credential-kv.py) 가 컨테이너에
+#   없어 미마운트 한다. 컨테이너는 커밋만 담당하고 push 는 host 에서 한다.
+RUN git config --system user.name kuhwa \
+ && git config --system user.email mesids@kuhwa.sen.sc.kr \
+ && mkdir -p /home/ubuntu/.cache /home/ubuntu/.config /home/ubuntu/.local \
+ && chmod 777 /home/ubuntu /home/ubuntu/.cache /home/ubuntu/.config /home/ubuntu/.local
+
+WORKDIR /opt/kuhwa
+USER 1001:1001
+ENTRYPOINT ["opencode"]
