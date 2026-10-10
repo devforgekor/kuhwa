@@ -37,9 +37,14 @@ router = APIRouter(tags=["calendar"])
 
 # OAuth service (initialized per request with dynamic redirect_uri)
 def get_oauth_service(request: Request, include_sheets: bool = False) -> GoogleOAuthService:
-    # Use the request's base URL to build redirect_uri
-    base_url = str(request.base_url).rstrip("/")
-    redirect_uri = f"{base_url}/auth/google/callback"
+    # redirect_uri 는 request.url_for 로 만든다 — 라우터의 /calendar 프리픽스와
+    # uvicorn --root-path(/timetable) 가 자동으로 반영되기 때문.
+    #
+    # (버그 수정 2026-10-10) 과거는 base_url + "/auth/google/callback" 을 직접 조립해
+    # /calendar 가 빠졌고, Google 로부터 돌아오는 콜백이 404였다.
+    #   과거: https://kuhwa.duckdns.org/timetable/auth/google/callback      (404)
+    #   수정: https://kuhwa.duckdns.org/timetable/calendar/auth/google/callback
+    redirect_uri = str(request.url_for("google_callback"))
     return GoogleOAuthService(redirect_uri=redirect_uri, include_sheets=include_sheets)
 
 
@@ -131,32 +136,32 @@ async def google_callback(request: Request, code: str = None, state: str = None,
     """Handle Google OAuth callback."""
     session = get_session(request)
     if not session:
-        return RedirectResponse(url=request.url_for("login_page") + "?error=session_expired")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=session_expired")
 
     if error:
-        return RedirectResponse(url=request.url_for("login_page") + f"?error={error}")
+        return RedirectResponse(url=str(request.url_for("login_page")) + f"?error={error}")
 
     if not code or not state:
-        return RedirectResponse(url=request.url_for("login_page") + "?error=missing_params")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=missing_params")
 
     # Verify state
     if state != session.get("oauth_state"):
-        return RedirectResponse(url=request.url_for("login_page") + "?error=invalid_state")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=invalid_state")
 
     oauth = get_oauth_service(request, include_sheets=session.get("sheets_mode", False))
     credentials = oauth.exchange_code_for_tokens(code)
 
     if not credentials:
-        return RedirectResponse(url=request.url_for("login_page") + "?error=token_exchange_failed")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=token_exchange_failed")
 
     # Get user info
     user_info = oauth.get_user_info(credentials.token)
     if not user_info:
-        return RedirectResponse(url=request.url_for("login_page") + "?error=user_info_failed")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=user_info_failed")
 
     # Store tokens
     if not oauth.store_tokens(credentials, user_info):
-        return RedirectResponse(url=request.url_for("login_page") + "?error=token_store_failed")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=token_store_failed")
 
     # Update session with user info
     session["user_id"] = user_info.get("id")
@@ -226,7 +231,7 @@ async def upload_excel(
     oauth = get_oauth_service(request)
     credentials = oauth.get_valid_credentials(session["user_id"])
     if not credentials:
-        return RedirectResponse(url=request.url_for("login_page") + "?error=token_expired")
+        return RedirectResponse(url=str(request.url_for("login_page")) + "?error=token_expired")
 
     config = SyncConfig(
         mode=SyncMode(sync_mode),
@@ -261,7 +266,7 @@ async def upload_sheets(
     oauth = get_oauth_service(request, include_sheets=True)
     credentials = oauth.get_valid_credentials(session["user_id"])
     if not credentials:
-        return RedirectResponse(url=request.url_for("google_login") + "?sheets=true")
+        return RedirectResponse(url=str(request.url_for("google_login")) + "?sheets=true")
 
     # Parse Sheets
     parser = SheetsParser()

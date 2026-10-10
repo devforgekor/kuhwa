@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # Status: experimental
-# Path: none — standalone migration script
-"""Database migration for calendar_sync: create user_tokens table."""
+# Path: standalone migration script — `python3 -m calendar_sync.db_migration`
+"""Database migration for calendar_sync: create user_tokens table (SQLite).
+
+과거 PostgreSQL TIMESTAMPTZ / TEXT[] 스키마를 SQLite TEXT 로 옮겼다.
+  - TIMESTAMPTZ  -> TEXT   # 앱이 이미 .isoformat() 문자열로 저장한다
+  - TEXT[]       -> TEXT   # 앱이 이미 PG 배열 리터럴 문자열로 저장한다
+  - NOW()        -> (datetime('now'))  # SQLite 기본값 함수
+"""
 
 import sys
 import os
@@ -18,10 +24,10 @@ CREATE TABLE IF NOT EXISTS user_tokens (
     email TEXT NOT NULL UNIQUE,
     access_token TEXT NOT NULL,
     refresh_token TEXT,
-    token_expiry TIMESTAMPTZ NOT NULL,
-    scopes TEXT[] NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    token_expiry TEXT NOT NULL,
+    scopes TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_tokens_email ON user_tokens(email);

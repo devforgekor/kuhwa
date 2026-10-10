@@ -7,6 +7,11 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
+
+def _utc_stamp(dt: datetime) -> str:
+    """SQLite datetime('now') 와 동일한 UTC 포맷 — TEXT 사전순 비교가 시간 비교로 성립."""
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
 from lib.db import psql_json, psql_ok, esc_sql
 
 
@@ -30,8 +35,8 @@ class SessionService:
                     name TEXT,
                     oauth_state TEXT,
                     sheets_mode BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    expires_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '24 hours'
+                    created_at TEXT DEFAULT (datetime('now')),
+                    expires_at TEXT DEFAULT (datetime('now', '+24 hours'))
                 )
             """)
             self._initialized = True
@@ -60,8 +65,8 @@ class SessionService:
             '{esc_sql(name)}',
             '{esc_sql(oauth_state)}',
             {str(sheets_mode).upper()},
-            '{esc_sql(now.isoformat())}',
-            '{esc_sql(expires.isoformat())}'
+            '{esc_sql(_utc_stamp(now))}',
+            '{esc_sql(_utc_stamp(expires))}'
         )
         """
         psql_ok(sql)
@@ -72,7 +77,7 @@ class SessionService:
         self._ensure_table()
         rows = psql_json(
             f"SELECT * FROM web_sessions WHERE session_id = '{esc_sql(session_id)}' "
-            f"AND expires_at > NOW()"
+            f"AND expires_at > datetime('now')"
         )
         if not rows:
             return None
@@ -113,10 +118,10 @@ class SessionService:
         """Remove expired sessions. Returns count of deleted sessions."""
         self._ensure_table()
         try:
-            rows = psql_json("SELECT COUNT(*) as cnt FROM web_sessions WHERE expires_at < NOW()")
+            rows = psql_json("SELECT COUNT(*) as cnt FROM web_sessions WHERE expires_at < datetime('now')")
             expired_count = rows[0]["cnt"] if rows else 0
             if expired_count > 0:
-                psql_ok("DELETE FROM web_sessions WHERE expires_at < NOW()")
+                psql_ok("DELETE FROM web_sessions WHERE expires_at < datetime('now')")
             return expired_count
         except Exception:
             return 0
