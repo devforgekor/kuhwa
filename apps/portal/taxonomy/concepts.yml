@@ -1,0 +1,108 @@
+# ============ 운영 원칙 ============
+# - 개념 ID와 트리(3.1)는 항상 1:1. 트리의 모든 ID는 여기에 등장해야 한다.
+# - URL 규칙(2026-10-08 결정): 모든 서비스는 kuhwa 도메인 하위 path로만 노출한다.
+#   Vercel 호스팅은 종료하고 kuhwa 자체호스팅으로 이관 → 전부 path 사용, 외부 url 미사용.
+#   (구 Vercel 오리진은 주석으로만 보관 — 직접 접근 차단 대상)
+# - type은 "배포/운영 형태"만 나타낸다. 서비스가 아니라 문서/저장소도 개념으로 포함된다.
+# - tech는 런타임·구성 기술 한정(내부 구성요소 포함). Wappalyzer로 확인 가능한
+#   외부 노출 기술은 observable 성질일 뿐 — 런타임 전체를 대표하지 않는다.
+
+scheme:
+  id: kuhwa
+  label: kuhwa
+  version: 2
+  updated: 2026-10-08
+
+types:                     # 유형 용어집 (통제어휘) — vercel 타입 폐기(2026-10-08): 전 서비스 자체호스팅
+  - { id: self-hosted,   label: "자체호스팅" }
+  - { id: repository,    label: "저장소" }
+  - { id: documentation, label: "문서" }
+
+concepts:
+  # ---- L0: 나이스 (NEIS·에듀파인) ----
+  - id: neis
+    label: 나이스
+    children: [schedule, timetable, cashbook]
+
+  - id: schedule
+    label: 학사일정
+    broader: neis
+    description: 한국구화학교 학사일정 안내 (NEIS API 기반).
+    path: /schedule/
+    type: self-hosted
+    tech: [nginx, static, neis-api]        # 데이터는 GH Actions가 저장소 public/data/{year}.json 선제작
+    # 구(舊) 오리진: https://kuhwa.vercel.app/ — 이관 후 접근 차단
+    related: [timetable, etextbook]
+
+  - id: timetable
+    label: 교사 시간표
+    broader: neis
+    description: 학기 시간표와 캘린더 동기화.
+    path: /timetable/
+    type: self-hosted
+    tech: [nginx, static]
+    # 구(舊) 오리진: https://mini-timetable.vercel.app/ — 이관 후 접근 차단
+    related: [schedule]
+
+  - id: cashbook
+    label: 예산 내역
+    broader: neis
+    description: 나이스 에듀파인 예산 사용 내역을 수기로 기록·관리합니다.
+    path: /cashbook/
+    type: self-hosted
+    tech: [nginx, static]
+    # 구(舊) 오리진: https://mini-cashbook.vercel.app/ — 이관 후 접근 차단
+
+  # ---- L0: 교육 도구 ----
+  - id: education-tools
+    label: 교육 도구
+    children: [etextbook, pdf2sheet, edufinebot]
+
+  - id: etextbook
+    label: 전자교과서 뷰어
+    broader: education-tools
+    description: EPUB3 기반 전자교과서 콘텐츠를 브라우저에서 열람합니다.
+    path: /app/etextbook/
+    type: self-hosted
+    tech: [nginx, docker, epub3, etxfetch, object-storage]   # 내부 캐시 파이프라인 포함
+    related: [schedule]
+
+  - id: pdf2sheet
+    label: PDF 변환 도구
+    broader: education-tools
+    description: PDF를 업로드해 스프레드시트·증명서 양식으로 변환합니다.
+    path: /app/pdf/
+    type: self-hosted
+    tech: [fastapi, docker, uvicorn]
+
+  - id: edufinebot
+    label: 품목내역 생성기
+    broader: education-tools
+    description: 에듀파인 물품 품의 내역서를 웹페이지 파싱으로 자동 작성합니다(엑셀 출력).
+    path: /edufinebot/            # 정식 경로. nginx가 /app/edufinebot/ 로 301 (Phase3)
+    type: self-hosted
+    tech: [javascript, static-parser]
+
+  # ---- L0: 자료실 ----
+  - id: library
+    label: 자료실
+    children: [kuhwa-repo, infra-docs]
+
+  - id: kuhwa-repo
+    label: 모노레포
+    broader: library
+    description: devforgekor/kuhwa 전체 소스.
+    url: https://github.com/devforgekor/kuhwa     # 규칙 예외: GitHub 저장소는 외부 url 허용
+    type: repository
+
+  - id: infra-docs
+    label: 인프라 문서
+    broader: library
+    description: kuhwa 서버·포털 운영 문서 (이 노트군).
+    type: documentation
+    internal: true             # 포털 카드에는 연결 대신 내부 참조로만 표시
+
+  # ---- L0: 기타 (예비) ----
+  - id: misc
+    label: 기타
+    children: []               # 예비 분류 — 신규 항목은 여기부터

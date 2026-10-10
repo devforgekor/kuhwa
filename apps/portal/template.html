@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>kuhwa 서비스</title>
+<meta name="description" content="kuhwa 모노레포 서비스 모음" />
+<style>
+  :root { --primary:#1d4ed8; --bg:#f8fafc; --card:#fff; --border:#e2e8f0;
+          --text:#1e293b; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Pretendard",-apple-system,BlinkMacSystemFont,
+         "Apple SD Gothic Neo","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--primary); color:#fff; padding:36px 20px 30px; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:26px; letter-spacing:-.02em; }
+  header p { margin:0; opacity:.85; font-size:14px; }
+  .breadcrumb { margin:12px 0 0; font-size:12.5px; opacity:.9; }
+  .breadcrumb a { color:#fff; text-decoration:none; }
+  .breadcrumb a:hover { text-decoration:underline; }
+  .breadcrumb .sep { margin:0 6px; opacity:.6; }
+  .layout { max-width:1100px; margin:0 auto; padding:28px 16px 56px;
+            display:flex; gap:28px; align-items:flex-start; }
+  nav.tree { flex:0 0 200px; background:var(--card); border:1px solid var(--border);
+             border-radius:12px; padding:14px 16px; font-size:13px; }
+  nav.tree .tree-l0 { display:block; margin:10px 0 4px; font-weight:600; color:var(--text); }
+  nav.tree ul { list-style:none; margin:0; padding:0; }
+  nav.tree ul ul { padding-left:12px; }
+  nav.tree ul ul li { margin:3px 0; }
+  nav.tree a { color:var(--muted); text-decoration:none; }
+  nav.tree a:hover { color:var(--primary); }
+  nav.tree .tree-internal { color:var(--muted); opacity:.7; }
+  main { flex:1; min-width:0; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+  a.card { display:block; background:var(--card); border:1px solid var(--border);
+           border-radius:12px; padding:18px; text-decoration:none; color:inherit;
+           transition:border-color .15s; }
+  a.card:hover { border-color:var(--primary); }
+  div.card.internal { display:block; background:var(--card); border:1px dashed var(--border);
+           border-radius:12px; padding:18px; color:var(--muted); }
+  .card h2 { margin:0 0 6px; font-size:17px; color:var(--primary); }
+  div.card.internal h2 { color:var(--muted); }
+  .card p { margin:0; font-size:13.5px; color:var(--muted); line-height:1.55; }
+  .card .tag { display:inline-block; margin-top:10px; font-size:11.5px; color:var(--muted);
+               border:1px solid var(--border); border-radius:999px; padding:2px 9px; }
+  footer { max-width:1100px; margin:0 auto; padding:0 16px 40px; font-size:12.5px; color:var(--muted); }
+  footer a { color:var(--muted); }
+  @media (max-width:720px) { .layout { flex-direction:column; } nav.tree { flex:auto; width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>kuhwa</h1>
+  <p>모노레포 서비스 모음</p>
+  <nav class="breadcrumb" aria-label="breadcrumb"><!--BREADCRUMB--></nav>
+</header>
+<div class="layout">
+  <nav class="tree" aria-label="분류 트리"><!--TREE--></nav>
+  <main>
+    <div class="grid"><!--ROWS--></div>
+  </main>
+</div>
+<footer>
+  © kuhwa · <a href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
+</footer>
+</body>
+</html>

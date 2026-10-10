@@ -8,3 +8,4 @@ apps/cashbook/data/
 *.bak
 .venv/
 etxfetch/.venv*/
+apps/portal/dist/

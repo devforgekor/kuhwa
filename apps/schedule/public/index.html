@@ -237,13 +237,8 @@
       } catch (err) {
         events = [];
       }
-      if (events.length === 0) {
-        // 정적 파일이 없거나 비어있는 경우(생성 전 등) 실시간 API로 대체합니다.
-        const res = await fetch(`/api/schedule?year=${year}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "요청 실패");
-        events = data.events || [];
-      }
+      // D1(a) 정적 JSON 단독화 (2026-10-10): /api/schedule 폴백 제거.
+      // 정적 파일이 없거나 비어 있으면 빈 달력으로 표시됩니다.
       cache.set(year, events);
       return events;
     }
