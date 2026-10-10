@@ -3,20 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}현금출납부{% endblock %}</title>
+  <title>{% block title %}예산 내역 · 현금출납부{% endblock %}</title>
   <script src="/static/vendor/htmx.min.js"></script>
   <script src="/static/vendor/tailwind.js"></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <nav class="bg-white shadow-sm border-b">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-      <a href="/" class="text-lg font-bold text-gray-800">현금출납부</a>
-      <a href="/logout" class="text-sm text-gray-500 hover:text-gray-700">로그아웃</a>
-    </div>
+<body class="bg-white min-h-screen">
+  <nav class="kb-topbar">
+    <a class='logo' href='/'>kuhwa</a>
+    <span class="app">예산 내역</span>
+    <span class="spacer"></span>
+    <a class="gh" href="/logout">로그아웃</a>
   </nav>
-  <main class="max-w-6xl mx-auto px-4 py-6">
+  <main class="kb-main">
     {% block content %}{% endblock %}
   </main>
+  <footer class="kb-foot">© kuhwa · 예산 내역 · <a href='/'>서비스 목록</a></footer>
 </body>
 </html>

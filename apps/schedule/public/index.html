@@ -5,98 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>한국구화학교 학사일정</title>
 <style>
+  /* ---- 디자인 토큰: kuhwa 포털(Primer 계열)과 동일 ---- */
   :root {
-    --primary: #1d4ed8;
-    --bg: #f8fafc;
+    --bg: #ffffff;
+    --bg-subtle: #f6f8fa;
     --card: #ffffff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-    --muted: #64748b;
-    --today: #fef3c7;
-    --holiday: #ef4444;
+    --border: #d1d9e0;
+    --text: #1f2328;
+    --muted: #656d76;
+    --accent: #0969da;
+    --today: #fff8c5;
+    --holiday: #d1242f;
+    --font-body: -apple-system, "Segoe UI", "Pretendard", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
   }
-  header {
-    background: var(--primary);
-    color: #fff;
-    padding: 24px 20px;
-    text-align: center;
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* 48px 얇은 헤더 — 단색 헤더 금지 */
+  .topbar {
+    height: 48px; display: flex; align-items: center; gap: 16px;
+    padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--bg);
   }
-  header p {
-    margin: 0;
-    opacity: 1;
-    font-size: clamp(15px, 4.5vw, 22px);
-    font-weight: 700;
-    white-space: nowrap;
-  }
+  .topbar .logo { font-weight: 600; font-size: 16px; color: var(--text); }
+  .topbar .logo:hover { text-decoration: none; }
+  .topbar .app { font-size: 13px; color: var(--muted); }
+  .topbar .spacer { flex: 1; }
+  .topbar .gh { font-size: 13px; color: var(--muted); }
+  .topbar .gh:hover { color: var(--accent); text-decoration: none; }
+
   main {
-    max-width: 820px;
+    max-width: 1012px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 32px 24px 0;
   }
+
+  /* 페이지 헤더 — 좌측정렬 제목 + 한 줄 설명 */
+  .page-head { margin-bottom: 24px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+  .page-head .lead { margin: 0; font-size: 15px; color: var(--muted); }
   .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    gap: 10px 14px;
+    justify-content: flex-start;
+    gap: 8px 12px;
     margin-bottom: 16px;
   }
   .controls button {
     border: 1px solid var(--border);
     background: var(--card);
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
+    color: var(--text);
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .controls button:hover { background: #eef2ff; }
+  .controls button:hover { background: var(--bg-subtle); border-color: var(--accent); }
   .controls .month-label {
-    font-size: 18px;
-    font-weight: 700;
-    min-width: 100px;
-    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 96px;
+    text-align: left;
     white-space: nowrap;
     flex-shrink: 0;
   }
   .cal-sub {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px 12px;
-    margin-top: 14px;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-top: 16px;
   }
   .cal-sub-btn {
     font-size: 12px;
-    color: var(--primary);
+    color: var(--accent);
     text-decoration: none;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 10px;
+    border-radius: 6px;
+    padding: 5px 10px;
     background: var(--card);
+    white-space: nowrap;
   }
-  .cal-sub-btn:hover { background: #eef2ff; }
-  .status { text-align: center; color: var(--muted); padding: 40px 0; }
+  .cal-sub-btn:hover { background: var(--bg-subtle); border-color: var(--accent); text-decoration: none; }
+  .status { color: var(--muted); padding: 24px 0; }
   .calendar {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 6px;
     overflow: hidden;
   }
   .weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    background: #f1f5f9;
+    background: var(--bg-subtle);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--muted);
   }
   .weekdays div {
@@ -106,8 +120,8 @@
     border-bottom: 1px solid var(--border);
   }
   .weekdays div:nth-child(7n) { border-right: none; }
-  .weekdays div:first-child { color: #dc2626; }
-  .weekdays div:last-child { color: #2563eb; }
+  .weekdays div:first-child { color: var(--holiday); }
+  .weekdays div:last-child { color: var(--accent); }
   .days {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -121,18 +135,19 @@
     vertical-align: top;
   }
   .day-cell:nth-child(7n) { border-right: none; }
-  .day-cell.empty { background: #fafafa; }
+  .day-cell.empty { background: var(--bg-subtle); }
   .day-cell.today { background: var(--today); }
   .day-num {
-    font-weight: 700;
+    font-weight: 600;
     margin-bottom: 4px;
   }
-  .day-cell.sunday .day-num { color: #dc2626; }
-  .day-cell.saturday .day-num { color: #2563eb; }
+  .day-cell.sunday .day-num { color: var(--holiday); }
+  .day-cell.saturday .day-num { color: var(--accent); }
   .event-chip {
-    background: #dbeafe;
-    color: #1e3a8a;
-    border-radius: 5px;
+    background: var(--bg-subtle);
+    color: var(--text);
+    border-left: 2px solid var(--accent);
+    border-radius: 3px;
     padding: 2px 4px;
     margin-bottom: 2px;
     font-size: 10px;
@@ -142,59 +157,69 @@
     white-space: nowrap;
   }
   .event-chip.holiday {
-    background: #fee2e2;
-    color: #991b1b;
+    background: #ffebe9;
+    color: var(--holiday);
+    border-left-color: var(--holiday);
   }
   .leave-note {
-    margin-top: 14px;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--primary);
-    background: #eff6ff;
+    margin-top: 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--bg-subtle);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px;
+    border-radius: 6px;
+    padding: 10px 12px;
   }
   footer {
-    text-align: center;
+    max-width: 1012px;
+    margin: 0 auto;
     color: var(--muted);
     font-size: 12px;
-    padding: 30px 0;
+    padding: 32px 24px 48px;
   }
   @media (max-width: 480px) {
-    header { padding: 18px 12px; }
+    main { padding: 24px 16px 0; }
+    .page-head h1 { font-size: 21px; }
     .day-cell { min-height: 62px; font-size: 10px; }
     .weekdays { font-size: 10px; }
     .weekdays div { padding: 6px 2px; }
     .event-chip { font-size: 9px; }
-    .controls { gap: 8px 10px; }
-    .controls button { padding: 7px 10px; font-size: 13px; }
-    .controls .month-label { font-size: 16px; min-width: 90px; }
+    .controls { gap: 8px; }
+    .controls button { padding: 6px 9px; font-size: 13px; }
+    .controls .month-label { font-size: 15px; min-width: 86px; }
+    footer { padding: 24px 16px 40px; }
   }
   @media (max-width: 360px) {
-    header { padding: 16px 10px; }
     .day-cell { font-size: 9px; }
     .weekdays { font-size: 9px; }
     .weekdays div { padding: 5px 1px; }
-    .controls button { padding: 6px 8px; font-size: 12px; }
-    .controls .month-label { font-size: 15px; min-width: 80px; }
+    .controls button { padding: 5px 8px; font-size: 12px; }
+    .controls .month-label { font-size: 14px; min-width: 78px; }
   }
 </style>
 </head>
 <body>
-  <header>
-    <p id="schoolYearLabel">불러오는 중...</p>
+  <header class="topbar">
+    <a class="logo" href="/">kuhwa</a>
+    <span class="app">학사일정</span>
+    <span class="spacer"></span>
+    <a class="gh" href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
   </header>
   <main>
+    <div class="page-head">
+      <h1>학사일정</h1>
+      <p class="lead" id="schoolYearLabel">불러오는 중...</p>
+    </div>
     <div class="controls">
-      <button id="prevBtn">‹ 이전달</button>
+      <button id="prevBtn" type="button">‹ 이전달</button>
       <div class="month-label" id="monthLabel">-</div>
-      <button id="nextBtn">다음달 ›</button>
+      <button id="nextBtn" type="button">다음달 ›</button>
     </div>
     <div id="content" class="status">학사일정을 불러오는 중입니다...</div>
   </main>
-  <footer>데이터 출처: 나이스(NEIS) 교육정보 개방 포털</footer>
+  <footer>데이터 출처: 나이스(NEIS) 교육정보 개방 포털 · <a href="data/calendar.ics">ICS 피드</a></footer>
 
   <script>
     const contentEl = document.getElementById("content");

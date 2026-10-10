@@ -1,3 +1,74 @@
+/* ---- 셸: kuhwa 포털 메인 페이지와 동일 ---- */
+.kb-topbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  border-bottom: 1px solid #d1d9e0;
+  background: #ffffff;
+}
+.kb-topbar .logo { font-weight: 600; font-size: 16px; color: #1f2328; text-decoration: none; }
+.kb-topbar .logo:hover { text-decoration: none; }
+.kb-topbar .app { font-size: 13px; color: #656d76; }
+.kb-topbar .spacer { flex: 1; }
+.kb-topbar a.gh { font-size: 13px; color: #656d76; text-decoration: none; }
+.kb-topbar a.gh:hover { color: #0969da; text-decoration: none; }
+
+.kb-main { max-width: 1012px; margin: 0 auto; padding: 32px 24px 48px; }
+.kb-head { margin-bottom: 28px; }
+.kb-head h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -.5px; color: #1f2328; }
+.kb-head .lead { margin: 0; font-size: 15px; color: #656d76; }
+
+.kb-foot {
+  max-width: 1012px; margin: 0 auto; padding: 8px 24px 40px;
+  font-size: 12px; color: #656d76;
+}
+.kb-foot a { color: #656d76; text-decoration: none; }
+.kb-foot a:hover { color: #0969da; }
+
+/* 떠 있는 카드 대신 포털 행형과 같은 얇은 외곽선 */
+.kb-card {
+  background: #ffffff;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  padding: 24px;
+}
+.kb-card:focus-within { border-color: #0969da; }
+
+.kb-error {
+  border: 1px solid #d1d9e0; border-left: 3px solid #cf222e;
+  border-radius: 6px; padding: 12px 14px; margin-bottom: 24px;
+  background: #f6f8fa; color: #cf222e; font-size: 13px;
+}
+.kb-field { margin-bottom: 16px; }
+.kb-field label {
+  display: block; margin-bottom: 6px;
+  font-size: 13px; font-weight: 600; color: #1f2328;
+}
+.kb-field input {
+  width: 100%; padding: 6px 10px;
+  border: 1px solid #d1d9e0; border-radius: 6px;
+  font-size: 14px; font-family: inherit;
+  background: #ffffff; color: #1f2328;
+}
+.kb-field input:focus {
+  outline: none; border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, .25);
+}
+.kb-btn {
+  display: inline-block; padding: 7px 16px;
+  background: #1f883d; color: #ffffff;
+  border: 1px solid rgba(31, 35, 40, .15); border-radius: 6px;
+  cursor: pointer; font-size: 14px; font-family: inherit;
+}
+.kb-btn:hover { background: #1a7f37; }
+
+@media (max-width: 640px) {
+  .kb-main { padding: 24px 16px 40px; }
+  .kb-head h1 { font-size: 21px; }
+}
+
 .cashbook-table input.edit-input {
   border: 1px solid transparent;
   background: transparent;

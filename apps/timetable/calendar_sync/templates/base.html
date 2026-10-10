@@ -3,43 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Google Calendar Sync{% endblock %}</title>
+    <title>{% block title %}교사 시간표{% endblock %}</title>
     <style>
+        /* ---- 디자인 토큰: kuhwa 포털(Primer 계열)과 동일 ---- */
+        :root {
+            --bg: #ffffff;
+            --bg-subtle: #f6f8fa;
+            --border: #d1d9e0;
+            --fg: #1f2328;
+            --fg-muted: #656d76;
+            --accent: #0969da;
+            --success: #1a7f37;
+            --attention: #9a6700;
+            --danger: #cf222e;
+            --font-body: -apple-system, "Segoe UI", "Pretendard", sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        }
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-bottom: 20px; }
-        h2 { color: #555; margin-top: 30px; }
-        .btn { display: inline-block; padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; text-decoration: none; }
-        .btn:hover { background: #3367d6; }
-        .btn-secondary { background: #34a853; }
-        .btn-secondary:hover { background: #2d9047; }
-        .btn-danger { background: #ea4335; }
-        .btn-danger:hover { background: #d33a2c; }
+        body {
+            margin: 0;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--fg);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* 48px 얇은 헤더 — 단색 헤더·떠 있는 카드 금지 */
+        .topbar {
+            height: 48px; display: flex; align-items: center; gap: 16px;
+            padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--bg);
+        }
+        .topbar .logo { font-weight: 600; font-size: 16px; color: var(--fg); }
+        .topbar .logo:hover { text-decoration: none; }
+        .topbar .app { font-size: 13px; color: var(--fg-muted); }
+        .topbar .spacer { flex: 1; }
+        .topbar .gh { font-size: 13px; color: var(--fg-muted); }
+        .topbar .gh:hover { color: var(--accent); text-decoration: none; }
+
+        .container { max-width: 1012px; margin: 0 auto; padding: 32px 24px 48px; }
+
+        h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; margin: 0 0 6px; color: var(--fg); }
+        h2 { font-size: 17px; font-weight: 600; margin: 36px 0 12px; color: var(--fg); }
+        .lead { font-size: 15px; color: var(--fg-muted); margin: 0 0 28px; }
+
+        /* 포털 메인 페이지와 동일한 행형 카드 */
+        .list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+        .row {
+            display: grid; grid-template-columns: minmax(0, 2fr) auto minmax(0, 1.7fr);
+            gap: 12px; align-items: center; padding: 14px;
+            border: 1px solid var(--border); border-radius: 6px;
+            background: var(--bg); color: var(--fg);
+        }
+        a.row:hover { border-color: var(--accent); background: var(--bg-subtle); text-decoration: none; }
+        .row .row-label { font-weight: 600; font-size: 14px; }
+        .row .row-type {
+            font-size: 12px; color: var(--fg-muted); border: 1px solid var(--border);
+            border-radius: 6px; padding: 1px 8px; white-space: nowrap; justify-self: start;
+        }
+        .row .row-path {
+            font-size: 13px; color: var(--fg-muted);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        footer {
+            max-width: 1012px; margin: 0 auto; padding: 8px 24px 40px;
+            font-size: 12px; color: var(--fg-muted);
+        }
+        footer a { color: var(--fg-muted); }
+        footer a:hover { color: var(--accent); }
+
+        @media (max-width: 640px) {
+            .container { padding: 24px 16px 40px; }
+            h1 { font-size: 21px; }
+            .row { grid-template-columns: 1fr auto; }
+            .row .row-path { grid-column: 1 / -1; }
+        }
+
+        /* 버튼 */
+        .btn {
+            display: inline-block; padding: 7px 16px; background: #1f883d; color: #fff;
+            border: 1px solid rgba(31,35,40,.15); border-radius: 6px; cursor: pointer;
+            font-size: 14px; font-family: inherit; text-decoration: none;
+        }
+        .btn:hover { background: #1a7f37; text-decoration: none; }
+        .btn-secondary { background: var(--bg-subtle); color: var(--fg); border-color: var(--border); }
+        .btn-secondary:hover { background: #eef1f4; border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: #cf222e; }
+        .btn-danger:hover { background: #a40e26; }
+
         .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 5px; font-weight: 500; }
-        input[type="text"], input[type="url"], input[type="date"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
-        input[type="file"] { padding: 10px; }
-        .error { background: #fce8e6; color: #c5221f; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
-        .success { background: #e6f4ea; color: #1e7e34; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
-        .warning { background: #fef7e0; color: #b06000; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; font-weight: 600; }
-        .user-info { display: flex; align-items: center; gap: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--fg); }
+        input[type="text"], input[type="url"], input[type="date"], select {
+            width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 14px; font-family: inherit; background: var(--bg); color: var(--fg);
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,.25); }
+        input[type="file"] { padding: 8px; font-size: 13px; }
+
+        /* 알림 — 채운 색 블록 대신 얇은 테두리 + 좌측 강조 */
+        .error, .success, .warning {
+            padding: 12px 14px; border: 1px solid var(--border); border-left-width: 3px;
+            border-radius: 6px; margin-bottom: 24px; background: var(--bg-subtle);
+        }
+        .error { border-left-color: var(--danger); color: var(--danger); }
+        .success { border-left-color: var(--success); color: var(--success); }
+        .warning { border-left-color: var(--attention); color: var(--attention); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+        th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-subtle); font-weight: 600; font-size: 12px; color: var(--fg-muted); }
+        tbody tr:hover { background: var(--bg-subtle); }
+
+        .user-info { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+                     background: var(--bg-subtle); border: 1px solid var(--border);
+                     border-radius: 6px; margin-bottom: 24px; }
         .user-info img { width: 40px; height: 40px; border-radius: 50%; }
-        .stats { display: flex; gap: 20px; margin: 20px 0; }
-        .stat { padding: 15px 20px; background: #f8f9fa; border-radius: 8px; text-align: center; flex: 1; }
-        .stat-value { font-size: 28px; font-weight: bold; color: #4285f4; }
-        .stat-label { font-size: 14px; color: #666; }
-        .stat.success .stat-value { color: #34a853; }
-        .stat.warning .stat-value { color: #fbbc05; }
-        .stat.danger .stat-value { color: #ea4335; }
+        .stats { display: flex; gap: 16px; margin: 24px 0; flex-wrap: wrap; }
+        .stat { padding: 14px 18px; background: var(--bg); border: 1px solid var(--border);
+                border-radius: 6px; flex: 1; min-width: 140px; }
+        .stat-value { font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: -.5px; }
+        .stat-label { font-size: 13px; color: var(--fg-muted); }
+        .stat.success .stat-value { color: var(--success); }
+        .stat.warning .stat-value { color: var(--attention); }
+        .stat.danger .stat-value { color: var(--danger); }
+
+        @media (max-width: 640px) {
+            .container { padding: 24px 16px 40px; }
+            h1 { font-size: 21px; }
+        }
     </style>
 </head>
 <body>
+    <header class="topbar">
+        <a class='logo' href='/'>kuhwa</a>
+        <span class="app">교사 시간표</span>
+        <span class="spacer"></span>
+        <a class="gh" href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
+    </header>
     <div class="container">
         {% block content %}{% endblock %}
     </div>
+    <footer>© kuhwa · 교사 시간표 · <a href='/'>서비스 목록</a></footer>
 </body>
 </html>

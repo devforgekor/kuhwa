@@ -13,7 +13,7 @@
 scheme:
   id: kuhwa
   label: kuhwa
-  version: 4
+  version: 5
   updated: 2026-10-10
 
 types:                     # 유형 용어집 (통제어휘) — vercel 타입 폐기(2026-10-08): 전 서비스 자체호스팅
@@ -103,6 +103,7 @@ concepts:
     description: devforgekor/kuhwa 전체 소스.
     url: https://github.com/devforgekor/kuhwa     # 규칙 예외: GitHub 저장소는 외부 url 허용
     type: repository
+    visibility: admin          # 포털 렌더 제외(2026-10-10) — 개념·트리에는 유지, 관리자 전용
 
   - id: infra-docs
     label: 인프라 문서
@@ -110,6 +111,7 @@ concepts:
     description: kuhwa 서버·포털 운영 문서 (이 노트군).
     type: documentation
     internal: true             # 포털 카드에는 연결 대신 내부 참조로만 표시
+    visibility: admin          # 포털 렌더 제외(2026-10-10) — 관리자 전용
 
   # ---- L0: 기타 (예비) ----
   - id: misc

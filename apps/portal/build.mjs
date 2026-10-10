@@ -263,6 +263,10 @@ try {
 // ---------------- 템플릿 치환 ----------------
 
 const leaves = concepts.filter(isLeaf);
+// visibility: admin — 포털 렌더에서 제외한다 (개념·트리 데이터 자체는 concepts.yml 에 유지)
+const isRendered = (c) => !!c && c.visibility !== "admin";
+const visibleLeaves = leaves.filter(isRendered);
+
 // 렌더 순서: L0 순서 → children 순서 (BFS)
 const orderedLeaves = [];
 for (const l0 of roots) {
@@ -271,22 +275,32 @@ for (const l0 of roots) {
     const c = byId.get(q.shift());
     if (!c) continue;
     if (c.children && c.children.length) q.push(...c.children);
-    else orderedLeaves.push(c);
+    else if (isRendered(c)) orderedLeaves.push(c);
   }
 }
 
 // TREE: L0 → 자식 링크
-const treeHtml = roots.map((l0) => {
-  const kids = (l0.children || []).map((id) => byId.get(id)).filter(Boolean);
-  const items = kids.map((k) =>
-    k.internal
-      ? `<span class="tree-internal">${esc(k.label)}</span>`
-      : k.url
-        ? `<a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.label)}</a>`
-        : `<a href="${esc(k.path)}">${esc(k.label)}</a>`
-  ).join("\n      ");
-  return `<span class="tree-l0">${esc(l0.label)}</span>\n      <ul>\n      ${items}\n      </ul>`;
-}).join("\n      ");
+// ① <li> 로 감싼다 — <a> 는 인라인 요소라 <li> 없이는 <ul> 안에서 한 줄로 나란히 붙는다.
+// ② visibility: admin 항목은 제외한다.
+// ③ 보이는 자식이 0개인 L0 은 통째로 숨긴다 (자료실 = 자식 전부 admin, 기타 = 예비 비어있음).
+const treeHtml = roots
+  .map((l0) => {
+    const kids = (l0.children || []).map((id) => byId.get(id)).filter(isRendered);
+    if (!kids.length) return "";
+    const items = kids
+      .map((k) => {
+        const inner = k.internal
+          ? `<span class="tree-internal">${esc(k.label)}</span>`
+          : k.url
+            ? `<a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.label)}</a>`
+            : `<a href="${esc(k.path)}">${esc(k.label)}</a>`;
+        return `<li>${inner}</li>`;
+      })
+      .join("\n        ");
+    return `<span class="tree-l0">${esc(l0.label)}</span>\n      <ul>\n        ${items}\n      </ul>`;
+  })
+  .filter(Boolean)
+  .join("\n      ");
 
 // ROWS: 행형 목록 (data-testid="portal-row" — 규칙7/G2 검증 대상)
 const rowsHtml = orderedLeaves.map((c) => {
@@ -337,13 +351,16 @@ template = template
   .replace("<!--BREADCRUMB-->", breadcrumbHtml)
   .replace(/(<meta name="description"[^>]*>\n)/, `$1${builtComment}`);
 
-// ---- 규칙7: 산출 HTML의 portal-row 개수 = 리프 수 ----
+// ---- 규칙7: 산출 HTML의 portal-row 개수 = 공개 리프 수 (admin 제외) ----
 const rowCount = (template.match(/data-testid="portal-row"/g) || []).length;
-if (rowCount !== leaves.length) {
-  console.error(`❌ 규칙7: portal-row ${rowCount}개 ≠ 리프 ${leaves.length}개 — 빌드 중단`);
+if (rowCount !== visibleLeaves.length) {
+  console.error(`❌ 규칙7: portal-row ${rowCount}개 ≠ 공개 리프 ${visibleLeaves.length}개 (전체 리프 ${leaves.length}) — 빌드 중단`);
   process.exit(1);
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(OUT_PATH, template);
-console.log(`✅ 규칙1~7 통과 — concepts ${concepts.length}개 / 리프 ${leaves.length}개 → ${OUT_PATH}`);
+console.log(
+  `✅ 규칙1~7 통과 — concepts ${concepts.length}개 / 리프 ${leaves.length}개 ` +
+  `(공개 ${visibleLeaves.length}, admin ${leaves.length - visibleLeaves.length}) → ${OUT_PATH}`,
+);

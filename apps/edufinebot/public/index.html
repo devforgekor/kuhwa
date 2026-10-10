@@ -6,75 +6,124 @@
 <title>품목내역 생성기</title>
 <link rel="icon" href="data:,">
 <style>
+  /* ---- 디자인 토큰: kuhwa 포털(Primer 계열)과 동일 ---- */
+  :root {
+    --bg: #ffffff; --bg-subtle: #f6f8fa;
+    --border: #d1d9e0;
+    --fg: #1f2328; --fg-muted: #656d76;
+    --accent: #0969da;
+    --success: #1a7f37; --attention: #9a6700; --danger: #cf222e;
+    --font-body: -apple-system, "Segoe UI", "Pretendard", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: #f4f6f8; color: #1f2933;
-    font-family: "Pretendard", "맑은 고딕", "Malgun Gothic", system-ui, sans-serif;
-    font-size: 14px; line-height: 1.5;
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 14px; line-height: 1.5;
   }
-  header {
-    background: #1f2933; color: #fff; padding: 14px 20px;
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* 48px 얇은 헤더 — 단색 헤더 금지 */
+  .topbar {
+    height: 48px; display: flex; align-items: center; gap: 16px;
+    padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--bg);
   }
-  header h1 { margin: 0; font-size: 18px; display: inline-block; }
-  header small { margin-left: 10px; color: #9aa5b1; font-weight: normal; }
-  main { max-width: 1100px; margin: 20px auto; padding: 0 16px 40px; }
-  .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .topbar .logo { font-weight: 600; font-size: 16px; color: var(--fg); }
+  .topbar .logo:hover { text-decoration: none; }
+  .topbar .app { font-size: 13px; color: var(--fg-muted); }
+  .topbar .spacer { flex: 1; }
+  .topbar .gh { font-size: 13px; color: var(--fg-muted); }
+  .topbar .gh:hover { color: var(--accent); text-decoration: none; }
+
+  main { max-width: 1012px; margin: 0 auto; padding: 32px 24px 0; }
+
+  /* 페이지 헤더 — 좌측정렬 제목 + 한 줄 설명 */
+  .page-head { margin-bottom: 24px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+  .page-head .lead { margin: 0; font-size: 15px; color: var(--fg-muted); }
+
+  .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 800px) { .inputs { grid-template-columns: 1fr; } }
   .pane {
-    background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; padding: 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px;
   }
-  .pane label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .pane label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
   .pane textarea {
     width: 100%; height: 260px; resize: vertical; padding: 8px;
-    border: 1px solid #bcccdc; border-radius: 6px;
-    font-family: Consolas, "Courier New", monospace; font-size: 12.5px;
-    background: #fbfdff;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-family: var(--font-mono); font-size: 12.5px;
+    background: var(--bg-subtle); color: var(--fg);
   }
-  .pane textarea:focus { outline: 2px solid #2f80ed; outline-offset: -1px; }
-  .btns { margin-top: 8px; display: flex; gap: 8px; }
+  .pane textarea:focus {
+    outline: none; background: var(--bg);
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9, 105, 218, .25);
+  }
+  .btns { margin-top: 10px; display: flex; gap: 8px; }
   button {
-    padding: 7px 14px; border: 1px solid #9fb3c8; border-radius: 6px;
-    background: #fff; color: #243b53; font-size: 13px; cursor: pointer;
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--fg); font-size: 13px; font-family: inherit; cursor: pointer;
   }
-  button:hover { background: #eef2f6; }
+  button:hover { background: var(--bg-subtle); border-color: var(--accent); color: var(--accent); }
+
+  /* 상태 — 채운 색 블록 대신 좌측 강조 테두리 */
   .status {
-    margin-top: 14px; padding: 11px 14px; border-radius: 8px;
-    font-weight: 700; border: 1px solid transparent;
+    margin-top: 16px; padding: 11px 14px; border-radius: 6px;
+    font-weight: 600; border: 1px solid var(--border); border-left-width: 3px;
+    background: var(--bg-subtle);
   }
-  .status.ok   { background: #e3f9e5; color: #0b6b2e; border-color: #8fd6a0; }
-  .status.warn { background: #fff3e0; color: #8a5300; border-color: #f5c26b; }
-  .status.err  { background: #fde8e8; color: #a02020; border-color: #f1a3a3; }
-  .status.info { background: #e8f1fd; color: #1b4f9c; border-color: #a9c6f0; }
+  .status.ok   { color: var(--success); border-left-color: var(--success); }
+  .status.warn { color: var(--attention); border-left-color: var(--attention); }
+  .status.err  { color: var(--danger); border-left-color: var(--danger); }
+  .status.info { color: var(--accent); border-left-color: var(--accent); }
+
   .result {
-    margin-top: 14px; background: #fff; border: 1px solid #d9e2ec;
-    border-radius: 8px; padding: 14px;
+    margin-top: 16px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px;
   }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td {
-    border: 1.5px solid #7b8a99; padding: 7px 8px; text-align: center;
+    border: 1px solid var(--border); padding: 8px; text-align: center;
     vertical-align: middle; word-break: break-all;
   }
-  th { background: #d9d9d9; font-weight: 700; }
+  th { background: var(--bg-subtle); font-weight: 600; color: var(--fg-muted); }
   td.left { text-align: left; }
-  tfoot td { background: #f3f3f3; font-weight: 700; }
-  .meta { margin-top: 8px; color: #627d98; font-size: 13px; }
-  .dl { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
+  tfoot td { background: var(--bg-subtle); font-weight: 600; }
+  .meta { margin-top: 10px; color: var(--fg-muted); font-size: 13px; }
+  .dl { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .dl button {
-    background: #2f80ed; border-color: #2f80ed; color: #fff;
-    font-weight: 700; padding: 9px 22px;
+    background: #1f883d; border: 1px solid rgba(31, 35, 40, .15); color: #fff;
+    font-weight: 600; padding: 7px 20px; font-size: 14px;
   }
-  .dl button:hover:not(:disabled) { background: #1b64c4; }
-  .dl button:disabled { background: #cbd5e1; border-color: #cbd5e1; color: #8795a1; cursor: not-allowed; }
-  .hint { color: #8795a1; font-size: 13px; }
-  footer { margin-top: 22px; color: #829ab1; font-size: 12.5px; }
+  .dl button:hover:not(:disabled) { background: #1a7f37; border-color: rgba(31,35,40,.15); color: #fff; }
+  .dl button:disabled { background: var(--bg-subtle); border-color: var(--border); color: var(--fg-muted); cursor: not-allowed; }
+  .hint { color: var(--fg-muted); font-size: 13px; }
+
+  footer {
+    max-width: 1012px; margin: 0 auto; padding: 28px 24px 40px;
+    color: var(--fg-muted); font-size: 12px;
+  }
+
+  @media (max-width: 640px) {
+    main { padding: 24px 16px 0; }
+    .page-head h1 { font-size: 21px; }
+    footer { padding: 24px 16px 40px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>품목내역 생성기</h1>
-  <small>쿠팡 장바구니 ∩ 주문/결제 교집합 → 엑셀</small>
+<header class="topbar">
+  <a class="logo" href="/">kuhwa</a>
+  <span class="app">품목내역 생성기</span>
+  <span class="spacer"></span>
+  <a class="gh" href="https://github.com/devforgekor/kuhwa" target="_blank" rel="noopener">source</a>
 </header>
 <main>
+  <div class="page-head">
+    <h1>품목내역 생성기</h1>
+    <p class="lead">쿠팡 장바구니 ∩ 주문/결제 교집합 → 엑셀</p>
+  </div>
+
   <section class="inputs">
     <div class="pane">
       <label for="cart">① 장바구니 페이지 텍스트</label>
@@ -128,9 +177,8 @@
       <span class="hint" id="hint"></span>
     </div>
   </section>
-
-  <footer>입력 텍스트는 서버로 전송되지 않으며 브라우저에서만 처리됩니다.</footer>
 </main>
+<footer>입력 텍스트는 서버로 전송되지 않으며 브라우저에서만 처리됩니다. · <a href="/">서비스 목록</a></footer>
 <script src="vendor/exceljs.min.js"></script>
 <script src="parser.js"></script>
 <script src="excel.js"></script>
