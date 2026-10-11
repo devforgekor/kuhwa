@@ -56,7 +56,7 @@ concepts:
     path: /cashbook/
     type: self-hosted
     tech: [nginx, python, fastapi, uvicorn, systemd]   # Phase3 실측: kuhwa:8092 uvicorn(systemd) + nginx proxy
-    observable: [nginx, fastapi-error-body, tailwind-vendor, htmx-vendor]  # 외부 3자 스크립트 0 (Phase5) — static/vendor/ 자체서빙: tailwind.js 407KB·htmx.min.js 51KB, 로그인 후 페이지에서 둘 다 200. POST 405 는 여전히 유효(/cashbook/ 등)
+    observable: [nginx, fastapi-error-body, tailwind-vendor, htmx-vendor]  # 외부 3자 스크립트 0 (Phase5) — static/vendor/ 자체서빙: tailwind.js 407KB·htmx.min.js 51KB, 로그인 없이 둘 다 200 (비밀번호 인증 제거 `745127b`). POST 405 는 여전히 유효(/cashbook/ 등)
     # 구(舊) 오리진: https://mini-cashbook.vercel.app/ — 이관 후 접근 차단
 
   # ---- L0: 교육 도구 ----
