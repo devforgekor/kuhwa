@@ -39,9 +39,9 @@ jobs:
       - name: 정적 앱 rsync
         run: |
           # -a 금지: 소유자·권한·시간 보존은 root 소유 대상에서 chgrp/chmod/utime EPERM(exit 23)
-          rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
+          rsync -rlz --delete --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
             apps/schedule/public/ kuhwa:/var/www/schedule/
-          rsync -rlz --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
+          rsync -rlz --delete --no-owner --no-group --no-perms --no-times -e "ssh -i ~/.ssh/key" \
             apps/edufinebot/public/ kuhwa:/var/www/edufinebot/
 
       - name: nginx · systemd 반영 (nginx -t 실패 시 롤백)
