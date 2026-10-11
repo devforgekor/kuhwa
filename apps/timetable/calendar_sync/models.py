@@ -6,7 +6,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SyncMode(str, Enum):
@@ -27,6 +27,22 @@ class UserToken(BaseModel):
     scopes: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("scopes", mode="before")
+    @classmethod
+    def _parse_pg_array_literal(cls, v):
+        # (2026-10-11) SQLite 이관 회귀 수정: PG TEXT[] 는 psycopg2 가 list 로 돌려줬지만
+        # SQLite TEXT 는 저장된 그대로 '{"a","b"}' 문자열을 반환한다 — list[str] 검증이
+        # 실패해 get_stored_tokens 가 ValidationError 으로 /status·업로드·로그아웃이 500 이었다.
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("{") and s.endswith("}"):
+                inner = s[1:-1].strip()
+                if not inner:
+                    return []
+                return [p.strip().strip('"') for p in inner.split(",")]
+            return [v] if v else []
+        return v
 
 
 class CalendarEvent(BaseModel):

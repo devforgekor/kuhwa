@@ -231,6 +231,9 @@ class GoogleOAuthService:
             client_id=GOOGLE_CLIENT_ID,
             client_secret=GOOGLE_CLIENT_SECRET,
             scopes=token_data.scopes,
+            # expiry 필수 — 안 넣으면 credentials.expiry 가 None 이라 아래 만료 검사가
+            # 죽고, 만료된 access_token 이 갱신 없이 그대로 사용된다 (2026-10-11 보완).
+            expiry=token_data.token_expiry,
         )
 
         # Check if token is expired or expiring soon (5 min buffer)

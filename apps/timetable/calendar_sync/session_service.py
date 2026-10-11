@@ -16,7 +16,7 @@ from lib.db import psql_json, psql_ok, esc_sql
 
 
 class SessionService:
-    """Manages user sessions in PostgreSQL."""
+    """Manages user sessions in SQLite."""
 
     def __init__(self):
         self._initialized = False
@@ -92,6 +92,7 @@ class SessionService:
 
     def update_session(self, session_id: str, session_data: dict) -> bool:
         """Update existing session data."""
+        self._ensure_table()
         user_id = session_data.get("user_id", "")
         email = session_data.get("email", "")
         name = session_data.get("name", "")
